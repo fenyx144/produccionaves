@@ -38,6 +38,11 @@ $paNavItems = [
         'label' => 'Ventas',
     ],
     [
+        'url'   => 'modules/mortalidad/despacho/dashboard-despacho.php',
+        'title' => 'Mortalidad en despacho',
+        'label' => 'Despacho',
+    ],
+    [
         'url'   => 'modules/mortalidad/graficas/dashboard-graficas.php',
         'title' => 'Gráficas mortalidad',
         'label' => 'Gráficas',

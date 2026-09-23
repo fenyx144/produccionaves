@@ -156,6 +156,8 @@ function sip_acl_infer_load_mode(?string $ruta): string
         'historia-clinica-graficas/',
         'historia_clinica/',
         'estandares-granja/',
+        'mortalidad/despacho/',
+        'mortalidad/ventas/',
     ];
     foreach ($sub as $s) {
         if (strpos($n, $s) !== false) {

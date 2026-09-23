@@ -701,6 +701,7 @@ function sip_menu_catalog_canonical_definition(): array
     $add('grp-sp-4-mort', 'item-sp-4-mort-aud', 'item', 'Auditoría', 'modules/mortalidad/auditoria/dashboard-auditoria.php', 'fas fa-clipboard-check');
     $add('grp-sp-4-mort', 'item-sp-4-mort-inf-ctb', 'item', 'Informe Contable', 'modules/mortalidad/informe_contable/dashboard-informe-contable.php', 'fas fa-file-invoice-dollar');
     $add('grp-sp-4-mort', 'item-sp-4-mort-vnt', 'item', 'Ventas', 'modules/mortalidad/ventas/dashboard-ventas.php', 'fas fa-hand-holding-usd');
+    $add('grp-sp-4-mort', 'item-sp-4-mort-dsp', 'item', 'Despacho', 'modules/mortalidad/despacho/dashboard-despacho.php', 'fas fa-truck-loading');
     $add('grp-sp-4-mort', 'item-sp-4-mort-grf', 'item', 'Gráficas', 'modules/mortalidad/graficas/dashboard-graficas.php', 'fas fa-chart-line');
     $add('grp-sp-4', 'grp-sp-4-hc', 'group', 'Historia clínica', '', 'fas fa-notes-medical');
     $add('grp-sp-4-hc', 'item-sp-4-5', 'item', 'Historia clínica', 'modules/sip/historia-clinica/dashboard-historia-clinica.php', 'fas fa-notes-medical', 'rep_hc');

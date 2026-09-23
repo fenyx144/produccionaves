@@ -169,6 +169,16 @@ function pmig_menu_definicion(): array
             'orden' => 70,
         ],
         [
+            'cod_mod' => 'item-pa-mort-dsp',
+            'tipo' => 'item',
+            'parent_cod' => 'grp-pa-mort',
+            'nom_mod' => 'Despacho',
+            'label_short' => 'Despacho',
+            'icono' => 'fas fa-truck-loading',
+            'url' => 'modules/mortalidad/despacho/dashboard-despacho.php',
+            'orden' => 75,
+        ],
+        [
             'cod_mod' => 'item-pa-mort-grf',
             'tipo' => 'item',
             'parent_cod' => 'grp-pa-mort',
