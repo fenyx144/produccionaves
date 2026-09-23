@@ -1,0 +1,375 @@
+/* Vista Iconos / Tabla — conmutador Lista/Iconos (definición única global) */
+.view-toggle-group {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem;
+    margin-bottom: 0;
+}
+.view-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.5rem 1rem;
+    min-height: 2.25rem;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.25;
+    color: #374151;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    box-sizing: border-box;
+}
+.view-toggle-btn i {
+    font-size: 0.8125rem;
+}
+.view-toggle-btn .mr-1 {
+    margin-right: 0.25rem;
+}
+.view-toggle-btn:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+}
+.view-toggle-btn.active {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: #fff;
+    border-color: #1d4ed8;
+}
+.view-toggle-btn.active:hover {
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+    border-color: #1e40af;
+}
+.view-lista-wrap { display: block; }
+.view-tarjetas-wrap { display: none; }
+
+/* Contenedor de tarjetas: ancho del contenedor, sin desborde horizontal */
+.view-tarjetas-wrap {
+    max-width: 100%;
+    min-width: 0;
+    overflow: visible;
+}
+/* Tailwind suele poner overflow-x-hidden aquí y recorta hover de cards + bordes de iconos */
+.view-tarjetas-wrap.overflow-x-hidden {
+    overflow-x: visible !important;
+}
+.cards-grid.cards-grid-iconos {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin: 0 auto;
+    padding: 0.75rem 0.2rem;
+    box-sizing: border-box;
+    overflow: visible;
+}
+.cards-grid.cards-grid-iconos .card-item {
+    padding: 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    position: relative;
+    z-index: 0;
+    box-shadow: 0 4px 14px rgba(24, 24, 27, 0.06);
+    border: 1px solid #e4e4e7;
+    border-radius: 1rem;
+    min-width: 0;
+    overflow-wrap: break-word;
+    box-sizing: border-box;
+    background-color: #fff;
+    cursor: default;
+    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease,
+        background-color 0.22s ease;
+}
+.cards-grid.cards-grid-iconos .card-item:hover,
+.cards-grid.cards-grid-iconos .card-item:focus-within {
+    z-index: 2;
+    transform: translateY(-4px);
+    background-color: var(--sip-card-lista-hover-bg, #e0f2fe) !important;
+    border-color: var(--sip-card-lista-hover-border, #7dd3fc) !important;
+    box-shadow:
+        0 16px 42px var(--sip-card-lista-hover-shadow, rgba(14, 165, 233, 0.22)),
+        0 0 0 2px var(--sip-card-lista-hover-ring, rgba(14, 165, 233, 0.38));
+}
+.cards-grid.cards-grid-iconos .card-item .card-numero-row {
+    font-size: 1.15rem;
+    color: #3f3f46;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #e4e4e7;
+}
+.cards-grid.cards-grid-iconos .card-item .card-codigo {
+    font-size: 1.2rem;
+    margin-bottom: 0;
+    font-weight: 700;
+    color: #27272a;
+    word-break: break-word;
+}
+.cards-grid.cards-grid-iconos .card-item .card-campos {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem 1rem;
+    background: #f8fafc;
+    padding: 1rem 1rem;
+    border-radius: 0.75rem;
+    min-width: 0;
+    box-sizing: border-box;
+    transition: background-color 0.22s ease, box-shadow 0.22s ease;
+}
+.cards-grid.cards-grid-iconos .card-item:hover .card-campos,
+.cards-grid.cards-grid-iconos .card-item:focus-within .card-campos {
+    background: var(--sip-card-lista-campos-hover-bg, rgba(186, 230, 253, 0.92));
+    box-shadow: inset 0 0 0 1px var(--sip-card-lista-campos-inset, rgba(14, 165, 233, 0.22));
+}
+.cards-grid.cards-grid-iconos .card-item .card-row {
+    font-size: 0.95rem;
+    margin-bottom: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    min-width: 0;
+}
+.cards-grid.cards-grid-iconos .card-item .card-row .label {
+    min-width: 0;
+    flex: 0 0 auto;
+    font-weight: 600;
+    color: #475569;
+}
+.cards-grid.cards-grid-iconos .card-item .card-row span:not(.label) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.cards-grid.cards-grid-iconos .card-item .card-acciones {
+    margin-top: 0.25rem;
+    padding: 0.45rem 0.5rem 0.4rem;
+    margin-left: 0;
+    margin-right: 0;
+    border-top: 1px solid #e4e4e7;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.45rem;
+    align-items: center;
+    overflow-x: auto;
+    overflow-y: visible;
+    min-width: 0;
+    -webkit-overflow-scrolling: touch;
+}
+.cards-grid.cards-grid-iconos .card-item .card-acciones a,
+.cards-grid.cards-grid-iconos .card-item .card-acciones button {
+    flex-shrink: 0;
+}
+/* En pantallas pequeñas: una columna (una tarjeta por fila) */
+@media (max-width: 767px) {
+    .cards-grid.cards-grid-iconos,
+    .tabla-listado-wrapper .view-tarjetas-wrap .cards-grid.cards-grid-iconos,
+    [data-vista-tabla-iconos] .view-tarjetas-wrap .cards-grid.cards-grid-iconos {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* En pantallas muy pequeñas: menos espacio y padding */
+@media (max-width: 640px) {
+    .cards-grid.cards-grid-iconos {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+        padding: 0.35rem 0;
+    }
+    .cards-grid.cards-grid-iconos .card-item {
+        padding: 0.5rem 0.65rem;
+        gap: 0.35rem;
+    }
+    .cards-grid.cards-grid-iconos .card-item .card-numero-row {
+        font-size: 0.75rem;
+        padding-bottom: 0.25rem;
+    }
+    .cards-grid.cards-grid-iconos .card-item .card-codigo {
+        font-size: 0.8rem;
+    }
+    .cards-grid.cards-grid-iconos .card-item .card-campos {
+        grid-template-columns: 1fr;
+        padding: 0.4rem 0.5rem;
+        gap: 0.25rem;
+    }
+    .cards-grid.cards-grid-iconos .card-item .card-row {
+        font-size: 0.7rem;
+    }
+    .cards-grid.cards-grid-iconos .card-item .card-acciones {
+        padding-top: 0.35rem;
+        gap: 0.25rem;
+    }
+    .cards-grid.cards-grid-iconos .card-item .card-acciones a,
+    .cards-grid.cards-grid-iconos .card-item .card-acciones button {
+        padding: 0.2rem 0.4rem;
+        font-size: 0.7rem;
+    }
+}
+
+/* Tablet: una columna (una tarjeta por fila), menos gap */
+@media (min-width: 641px) and (max-width: 1024px) {
+    .cards-grid.cards-grid-iconos {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+        padding: 0.5rem 0;
+    }
+    .cards-grid.cards-grid-iconos .card-item {
+        padding: 0.75rem 1rem;
+        gap: 0.5rem;
+    }
+    .cards-grid.cards-grid-iconos .card-item .card-numero-row {
+        font-size: 0.9rem;
+    }
+    .cards-grid.cards-grid-iconos .card-item .card-codigo {
+        font-size: 1rem;
+    }
+    .cards-grid.cards-grid-iconos .card-item .card-row {
+        font-size: 0.85rem;
+    }
+}
+
+/* Listados (Reportes, Programas, etc.): en desktop 2 columnas; en pantallas pequeñas 1 columna (ver media queries abajo) */
+@media (min-width: 768px) {
+    .tabla-listado-wrapper .view-tarjetas-wrap .cards-grid.cards-grid-iconos,
+    [data-vista-tabla-iconos] .view-tarjetas-wrap .cards-grid.cards-grid-iconos {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+        padding: 0.5rem 0;
+    }
+}
+
+.card-item {
+    background: white;
+    border: 1px solid #e4e4e7;
+    border-radius: 1rem;
+    padding: 1rem;
+    position: relative;
+    z-index: 0;
+    box-shadow: 0 2px 8px rgba(24, 24, 27, 0.06);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease,
+        background-color 0.2s ease;
+}
+.card-item:hover,
+.card-item:focus-within {
+    z-index: 2;
+    transform: translateY(-4px);
+    background-color: var(--sip-card-lista-hover-bg, #e0f2fe) !important;
+    border-color: var(--sip-card-lista-hover-border, #7dd3fc) !important;
+    box-shadow:
+        0 14px 36px var(--sip-card-lista-hover-shadow, rgba(14, 165, 233, 0.2)),
+        0 0 0 2px var(--sip-card-lista-hover-ring, rgba(14, 165, 233, 0.34));
+}
+
+/* Vista Lista: tarjetas dentro de .view-lista-wrap (p. ej. pendientes, tracking) */
+.view-lista-wrap .card-item {
+    cursor: default;
+    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease,
+        background-color 0.22s ease;
+}
+.view-lista-wrap .card-item .card-campos {
+    transition: background-color 0.22s ease, box-shadow 0.22s ease;
+}
+.view-lista-wrap .card-item:hover .card-campos,
+.view-lista-wrap .card-item:focus-within .card-campos {
+    background: var(--sip-card-lista-campos-hover-bg, rgba(186, 230, 253, 0.92)) !important;
+    box-shadow: inset 0 0 0 1px var(--sip-card-lista-campos-inset, rgba(14, 165, 233, 0.22));
+}
+/* Primera fila: solo numeración (#1) */
+.card-item .card-numero-row {
+    font-weight: 700;
+    font-size: 1rem;
+    color: #3f3f46;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+.card-item .card-contenido {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+.card-item .card-codigo {
+    font-weight: 700;
+    font-size: 1rem;
+    color: #27272a;
+    margin-bottom: 0.25rem;
+}
+.card-item .card-campos {
+    margin-bottom: 0.25rem;
+}
+.card-item .card-row {
+    font-size: 0.8rem;
+    color: #4b5563;
+    margin-bottom: 0.25rem;
+}
+.card-item .card-row span.label { color: #6b7280; }
+.card-item .card-acciones {
+    margin-top: 0.75rem;
+    padding: 0.5rem 0.35rem 0.35rem;
+    margin-left: -0.15rem;
+    margin-right: -0.15rem;
+    border-top: 1px solid #e4e4e7;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+    align-items: center;
+    overflow-x: auto;
+    overflow-y: visible;
+}
+.card-item .card-acciones a,
+.card-item .card-acciones button {
+    padding: 0.35rem 0.4rem;
+    min-width: 2.1rem;
+    min-height: 2.1rem;
+    font-size: 0.75rem;
+    border-radius: 0.5rem;
+}
+
+/* Controles de navegación en vista iconos (igual que tabla) */
+.view-tarjetas-wrap .cards-length-select {
+    padding: 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    margin: 0 0.25rem;
+    font-size: 0.875rem;
+}
+.view-tarjetas-wrap #cardsControlsTopNec button,
+.view-tarjetas-wrap #cardsPaginationNec button {
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.view-tarjetas-wrap #cardsControlsTopNec button:not(:disabled):hover,
+.view-tarjetas-wrap #cardsPaginationNec button:not(:disabled):hover {
+    background: #f3f4f6;
+}
+
+/* Por defecto: en móvil Iconos, en desktop Lista (tabla). Respetar data-vista en ambos tamaños. */
+/* Soporta [data-vista-tabla-iconos] Y .dashboard-tabla-wrapper para máxima compatibilidad */
+/* (tipo_muestra, paquete_analisis, tipo_respuesta, productos, laboratorio, etc.) */
+@media (max-width: 767px) {
+    [data-vista-tabla-iconos] .view-tarjetas-wrap,
+    .dashboard-tabla-wrapper .view-tarjetas-wrap { display: block; }
+    [data-vista-tabla-iconos] .view-lista-wrap,
+    .dashboard-tabla-wrapper .view-lista-wrap { display: none; }
+    [data-vista-tabla-iconos][data-vista="tabla"] .view-tarjetas-wrap,
+    .dashboard-tabla-wrapper[data-vista="tabla"] .view-tarjetas-wrap { display: none !important; }
+    [data-vista-tabla-iconos][data-vista="tabla"] .view-lista-wrap,
+    .dashboard-tabla-wrapper[data-vista="tabla"] .view-lista-wrap { display: block !important; }
+    [data-vista-tabla-iconos][data-vista="lista"] .view-tarjetas-wrap,
+    .dashboard-tabla-wrapper[data-vista="lista"] .view-tarjetas-wrap { display: none !important; }
+    [data-vista-tabla-iconos][data-vista="lista"] .view-lista-wrap,
+    .dashboard-tabla-wrapper[data-vista="lista"] .view-lista-wrap { display: block !important; }
+}
+@media (min-width: 768px) {
+    [data-vista-tabla-iconos] .view-lista-wrap,
+    .dashboard-tabla-wrapper .view-lista-wrap { display: block; }
+    [data-vista-tabla-iconos] .view-tarjetas-wrap,
+    .dashboard-tabla-wrapper .view-tarjetas-wrap { display: none; }
+    [data-vista-tabla-iconos][data-vista="iconos"] .view-lista-wrap,
+    .dashboard-tabla-wrapper[data-vista="iconos"] .view-lista-wrap { display: none !important; }
+    [data-vista-tabla-iconos][data-vista="iconos"] .view-tarjetas-wrap,
+    .dashboard-tabla-wrapper[data-vista="iconos"] .view-tarjetas-wrap { display: block !important; }
+}

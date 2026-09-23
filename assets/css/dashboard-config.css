@@ -1,0 +1,1110 @@
+/* Estilos unificados para dashboards de configuración (botones, tabla, DataTables) */
+
+@import url("ix2-module-dark.css");
+
+/* Filtro por periodo: más ancho en todas las secciones */
+.filter-row-periodo > div.flex-shrink-0[style*="width"] { min-width: 200px !important; }
+.filter-row-periodo #periodoPorFecha,
+.filter-row-periodo #periodoPorMes { min-width: 200px !important; }
+.filter-row-periodo .min-w-\[120px\] { min-width: 180px !important; }
+.filter-row-periodo .min-w-\[130px\] { min-width: 200px !important; }
+
+/* ========== Card de filtros compacta: misma altura de campos y aspecto compacto ========== */
+/* Cabecera de la card: menos padding */
+.card-filtros-compacta > button,
+.card-filtros-compacta > div[onclick],
+.card-filtros-compacta .border-b > button {
+    padding: 0.5rem 1rem !important;
+}
+.card-filtros-compacta > button h3,
+.card-filtros-compacta > div[onclick] h3,
+.card-filtros-compacta .border-b > button h3 {
+    font-size: 0.875rem !important;
+}
+/* Contenido de la card: menos padding (todos los IDs de contenido de filtros) */
+.card-filtros-compacta #contenidoFiltros,
+.card-filtros-compacta #filtrosContent,
+.card-filtros-compacta #contenidoFiltrosProgramas,
+.card-filtros-compacta #contenidoFiltrosCronograma {
+    padding: 0.5rem 1rem 0.75rem !important;
+}
+/* Todos los labels dentro de la card: misma altura de línea y margen */
+.card-filtros-compacta label {
+    font-size: 0.75rem !important;
+    margin-bottom: 0.2rem !important;
+    line-height: 1.2;
+}
+/* Misma altura para TODOS los inputs y selects de la card (compacto) */
+.card-filtros-compacta input[type="date"],
+.card-filtros-compacta input[type="month"],
+.card-filtros-compacta input[type="text"],
+.card-filtros-compacta input[type="number"],
+.card-filtros-compacta select,
+.card-filtros-compacta .form-control {
+    height: 1.875rem !important;
+    min-height: 1.875rem !important;
+    padding: 0.25rem 0.5rem !important;
+    font-size: 0.8125rem !important;
+    line-height: 1.25;
+    box-sizing: border-box;
+}
+/* Select2 y botones tipo dropdown dentro de la card (misma altura si aplica) */
+.card-filtros-compacta .select2-container--default .select2-selection--single {
+    height: 1.875rem !important;
+    min-height: 1.875rem !important;
+    padding: 0.25rem 0.5rem !important;
+}
+.card-filtros-compacta .select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 1.4 !important;
+}
+.card-filtros-compacta #dropdownGranjaBtn,
+.card-filtros-compacta button[id^="dropdown"] {
+    height: 1.875rem !important;
+    min-height: 1.875rem !important;
+    padding: 0.25rem 0.5rem !important;
+    font-size: 0.8125rem !important;
+}
+/* Fila periodo: menos margen y gap */
+.card-filtros-compacta .filter-row-periodo {
+    margin-bottom: 0.5rem !important;
+    gap: 0.35rem 0.75rem !important;
+}
+.card-filtros-compacta .filter-row-periodo .min-w-\[180px\] label,
+.card-filtros-compacta .filter-row-periodo .min-w-\[200px\] label {
+    margin-bottom: 0.2rem !important;
+}
+/* Filas siguientes (grid de otros filtros): mismo gap compacto */
+.card-filtros-compacta #contenidoFiltros .grid,
+.card-filtros-compacta #filtrosContent .grid,
+.card-filtros-compacta #contenidoFiltrosProgramas .grid,
+.card-filtros-compacta #contenidoFiltrosCronograma .grid {
+    gap: 0.5rem 1rem !important;
+}
+.card-filtros-compacta #contenidoFiltros .grid.gap-6,
+.card-filtros-compacta #filtrosContent .grid.gap-6,
+.card-filtros-compacta #contenidoFiltrosProgramas .grid.gap-6,
+.card-filtros-compacta #contenidoFiltrosCronograma .grid.gap-6 { gap: 0.5rem 1rem !important; }
+.card-filtros-compacta #contenidoFiltros .grid.gap-4,
+.card-filtros-compacta #filtrosContent .grid.gap-4,
+.card-filtros-compacta #contenidoFiltrosProgramas .grid.gap-4,
+.card-filtros-compacta #contenidoFiltrosCronograma .grid.gap-4 { gap: 0.35rem 0.75rem !important; }
+/* Margenes compactos en contenido de filtros */
+.card-filtros-compacta #contenidoFiltros .mb-6,
+.card-filtros-compacta #filtrosContent .mb-6,
+.card-filtros-compacta #contenidoFiltrosProgramas .mb-6,
+.card-filtros-compacta #contenidoFiltrosCronograma .mb-6 { margin-bottom: 0.5rem !important; }
+.card-filtros-compacta #contenidoFiltros .mb-4,
+.card-filtros-compacta #filtrosContent .mb-4,
+.card-filtros-compacta #contenidoFiltrosProgramas .mb-4,
+.card-filtros-compacta #contenidoFiltrosCronograma .mb-4 { margin-bottom: 0.35rem !important; }
+.card-filtros-compacta #contenidoFiltros .mt-6,
+.card-filtros-compacta #filtrosContent .mt-6,
+.card-filtros-compacta #contenidoFiltrosProgramas .mt-6,
+.card-filtros-compacta #contenidoFiltrosCronograma .mt-6 { margin-top: 0.5rem !important; }
+.card-filtros-compacta #contenidoFiltros .mt-4,
+.card-filtros-compacta #filtrosContent .mt-4,
+.card-filtros-compacta #contenidoFiltrosProgramas .mt-4,
+.card-filtros-compacta #contenidoFiltrosCronograma .mt-4 { margin-top: 0.35rem !important; }
+/* Acciones (Filtrar, Limpiar): botones compactos */
+.card-filtros-compacta .dashboard-actions,
+.card-filtros-compacta .flex.flex-wrap.items-center.gap-3 {
+    margin-top: 0.5rem !important;
+    gap: 0.35rem 0.75rem !important;
+}
+.card-filtros-compacta .dashboard-actions button,
+.card-filtros-compacta .flex.flex-wrap.items-center.gap-3 button {
+    padding: 0.3rem 0.6rem !important;
+    font-size: 0.8125rem !important;
+    height: 1.875rem !important;
+    min-height: 1.875rem !important;
+}
+/* Border-t / pt del contenido (cronograma, programas, necropsias) */
+.card-filtros-compacta #contenidoFiltrosCronograma .border-t,
+.card-filtros-compacta #contenidoFiltrosProgramas .border-t,
+.card-filtros-compacta #contenidoFiltros .border-t {
+    padding-top: 0.5rem !important;
+}
+
+/* Stack listado: filtros + tabla al mismo ancho */
+.dash-listado-stack {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+.dash-listado-stack > .card-filtros-compacta,
+.dash-listado-stack > .tabla-listado-wrapper {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin-left: 0;
+    margin-right: 0;
+}
+
+/* Botones: mismo estilo que tipo_muestra */
+.btn-export {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);
+    color: #fff;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+.btn-export:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 8px rgba(16, 185, 129, 0.4);
+    color: #fff;
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.btn-secondary:hover {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 8px rgba(59, 130, 246, 0.4);
+    color: #fff;
+}
+
+/* ========== Contenedor de tablas: ancho disponible, scroll solo en pantallas pequeñas ========== */
+.table-wrapper {
+    overflow-y: visible;
+    width: 100%;
+    max-width: 100%;
+    border-radius: 1rem;
+    min-width: 0; /* permite que flex/grid reduzca en pantallas pequeñas */
+}
+.table-wrapper,
+.dataTables_wrapper {
+    /* Evita scroll vertical anidado en listados; el scroll vertical queda en la página */
+    overflow-y: visible !important;
+}
+.view-lista-wrap,
+.view-lista-wrap-crono,
+.view-tarjetas-wrap,
+.view-tarjetas-wrap-crono,
+.tabla-crono-wrapper {
+    overflow-y: visible !important;
+}
+/* Pantallas grandes: sin scroll horizontal, la tabla usa todo el ancho disponible */
+@media (min-width: 768px) {
+    .table-wrapper {
+        overflow-x: visible;
+    }
+}
+/* Pantallas pequeñas: scroll horizontal para no romper el layout */
+@media (max-width: 767px) {
+    .table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+.table-wrapper::-webkit-scrollbar {
+    height: 8px;
+}
+.table-wrapper::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 8px;
+}
+.table-wrapper::-webkit-scrollbar-thumb {
+    background: #94a3b8;
+    border-radius: 8px;
+}
+.table-wrapper::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+}
+
+/* ========== Tablas unificadas: distribuir ancho entre columnas, contenido visible (wrap) ========== */
+:root {
+    --pa-table-head-bg: #1e3a8a;
+    --pa-table-head-fg: #ffffff;
+    --pa-table-head-border: #1d4ed8;
+}
+html[data-theme="dark"] {
+    --pa-table-head-bg: #0077A3;
+    --pa-table-head-fg: #ffffff;
+    --pa-table-head-border: #0086b8;
+}
+/* Base: table-layout auto reparte el ancho disponible según contenido; todo el texto se ve (wrap) */
+.data-table,
+.config-table,
+table.data-table,
+table.config-table {
+    width: 100% !important;
+    max-width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+    table-layout: auto;
+    min-width: 0;
+}
+.data-table thead th,
+.config-table thead th,
+.data-table.config-table thead th,
+table.dataTable.data-table.config-table > thead > tr > th,
+table.dataTable.data-table.config-table > thead > tr > td,
+.dataTables_scrollHead table.dataTable thead th,
+.dataTables_scrollHead table.dataTable thead td,
+.dataTables_scrollHead .data-table.config-table thead th {
+    background-color: var(--pa-table-head-bg) !important;
+    background: var(--pa-table-head-bg) !important;
+    color: var(--pa-table-head-fg) !important;
+    border-color: var(--pa-table-head-border) !important;
+    font-weight: 600;
+    font-size: 0.75rem;
+    border: none;
+    padding: 0.5rem 0.6rem;
+    text-align: left;
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    box-sizing: border-box;
+}
+/* Esquinas superiores redondeadas de la cabecera (como en reportes) */
+.data-table thead tr:first-child th:first-child,
+.config-table thead tr:first-child th:first-child,
+.data-table.config-table thead tr:first-child th:first-child {
+    border-top-left-radius: 0.5rem;
+}
+.data-table thead tr:first-child th:last-child,
+.config-table thead tr:first-child th:last-child,
+.data-table.config-table thead tr:first-child th:last-child {
+    border-top-right-radius: 0.5rem;
+}
+.data-table tbody td,
+.config-table tbody td,
+.data-table.config-table tbody td {
+    font-weight: normal !important;
+    font-size: 0.8125rem;
+    color: #374151;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 0.5rem 0.6rem;
+    text-align: left;
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    box-sizing: border-box;
+    min-width: 0;
+    max-width: 100%;
+}
+.data-table tbody td.max-w-none,
+.config-table tbody td.max-w-none {
+    max-width: none;
+}
+
+/* Opcional: columna que no debe envolver (añadir clase .whitespace-nowrap en th/td si hace falta) */
+.data-table .whitespace-nowrap,
+.config-table .whitespace-nowrap {
+    white-space: nowrap !important;
+    max-width: none !important;
+}
+
+/* Filas alternas */
+.data-table tbody tr:nth-child(odd),
+.config-table tbody tr:nth-child(odd),
+.data-table.config-table tbody tr:nth-child(odd),
+.data-table.config-table tbody tr.odd {
+    background-color: #ffffff;
+}
+.data-table tbody tr:nth-child(even),
+.config-table tbody tr:nth-child(even),
+.data-table.config-table tbody tr:nth-child(even),
+.data-table.config-table tbody tr.even {
+    background-color: #f8fafc;
+}
+
+/* Hover fila: tinte cálido SIP (variables en css/sip-global-theme.css vía output.css) */
+.data-table tbody tr:hover,
+.config-table tbody tr:hover,
+.data-table.config-table tbody tr:hover {
+    background-color: var(--sip-hover-surface, #f4f4f5) !important;
+    box-shadow: inset 3px 0 0 0 var(--sip-hover-edge, #a1a1aa);
+}
+.data-table tbody tr:hover td,
+.config-table tbody tr:hover td,
+.data-table.config-table tbody tr:hover td {
+    background-color: var(--sip-hover-surface, #f4f4f5) !important;
+    color: inherit !important;
+}
+
+/* ========== Tablas unificadas por CLASE ==========
+ * Cualquier <table> con class="data-table config-table" obtiene este estilo.
+ * No hace falta añadir IDs al CSS: reportes, configuración, programas, cronograma, etc.
+ */
+.data-table.config-table thead th,
+table.dataTable.data-table.config-table > thead > tr > th {
+    background-color: var(--pa-table-head-bg) !important;
+    background: var(--pa-table-head-bg) !important;
+    color: var(--pa-table-head-fg) !important;
+    font-weight: 600 !important;
+    font-size: 0.75rem !important;
+    border: none !important;
+    padding: 0.5rem 0.6rem !important;
+}
+
+/* Con scrollX, DataTables duplica thead en scrollBody: ocultar por completo */
+.dataTables_scrollBody thead {
+    display: none !important;
+}
+
+/* Columnas ordenables: sin fondo ni sombra distintos (heredan fila impar/par/hover) */
+.data-table.config-table tbody td.sorting_1,
+.data-table.config-table tbody td.sorting_2,
+.data-table.config-table tbody td.sorting_3,
+table.dataTable.display.data-table.config-table tbody td.sorting_1,
+table.dataTable.display.data-table.config-table tbody td.sorting_2,
+table.dataTable.display.data-table.config-table tbody td.sorting_3,
+.dataTables_wrapper table.dataTable.display.data-table.config-table tbody td.sorting_1,
+.dataTables_wrapper table.dataTable.display.data-table.config-table tbody td.sorting_2,
+.dataTables_wrapper table.dataTable.display.data-table.config-table tbody td.sorting_3,
+.dataTables_wrapper table.dataTable.order-column.display.data-table.config-table tbody td.sorting_1,
+.dataTables_wrapper table.dataTable.order-column.display.data-table.config-table tbody td.sorting_2,
+.dataTables_wrapper table.dataTable.order-column.display.data-table.config-table tbody td.sorting_3 {
+    box-shadow: none !important;
+    background-color: inherit !important;
+}
+
+/* Celdas y filas unificadas por clase */
+.data-table.config-table tbody td {
+    font-size: 0.8125rem !important;
+    color: #374151 !important;
+    border-bottom: 1px solid #e5e7eb !important;
+    padding: 0.5rem 0.6rem !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+}
+.data-table.config-table tbody tr:nth-child(odd),
+.data-table.config-table tbody tr.odd,
+table.dataTable.display.data-table.config-table tbody tr:nth-child(odd),
+table.dataTable.display.data-table.config-table tbody tr.odd {
+    background-color: #ffffff !important;
+    box-shadow: none !important;
+}
+.data-table.config-table tbody tr:nth-child(even),
+.data-table.config-table tbody tr.even,
+table.dataTable.display.data-table.config-table tbody tr:nth-child(even),
+table.dataTable.display.data-table.config-table tbody tr.even {
+    background-color: #f8fafc !important;
+    box-shadow: none !important;
+}
+.data-table.config-table tbody tr:hover,
+table.dataTable.display.data-table.config-table tbody tr:hover {
+    background-color: inherit !important;
+}
+.data-table.config-table tbody tr:hover td,
+table.dataTable.display.data-table.config-table tbody tr:hover td {
+    color: inherit !important;
+}
+/* Celdas: anular box-shadow de rayas que DataTables aplica por defecto */
+table.dataTable.display.data-table.config-table tbody tr.odd > td,
+table.dataTable.display.data-table.config-table tbody tr.even > td {
+    box-shadow: none !important;
+}
+
+/* Contorno externo de tablas en pantalla (listados): borde fino */
+.table-wrapper-borde {
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+/* Table wrapper: estilos de scrollbar (el overflow se controla por media query más arriba) */
+
+/* Columnas de ancho fijo por clase (sin depender de ID) */
+.data-table.config-table.tabla-fixed-8col {
+    table-layout: fixed;
+    width: 100% !important;
+}
+.data-table.config-table.tabla-fixed-8col th,
+.data-table.config-table.tabla-fixed-8col td {
+    width: 12.5%;
+}
+
+.data-table.config-table.tabla-fixed-6col {
+    table-layout: fixed;
+    width: 100% !important;
+}
+.data-table.config-table.tabla-fixed-6col th,
+.data-table.config-table.tabla-fixed-6col td {
+    width: 16.666%;
+}
+
+/* DataTables: controles compactos */
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter,
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_paginate {
+    padding: 0.5rem 0.75rem;
+}
+/* En tablas homologadas, ocultar toda la fila superior nativa para evitar flash visual (controles se mueven al toolbar) */
+.toolbar-vista-row ~ .view-lista-wrap .dataTables_wrapper .dt-top-row,
+.reportes-toolbar-row ~ .view-lista-wrap .dataTables_wrapper .dt-top-row {
+    display: none !important;
+}
+.dataTables_wrapper .dataTables_length label,
+.dataTables_wrapper .dataTables_filter label {
+    margin: 0;
+    font-weight: 500;
+    font-size: 0.8125rem;
+    color: #374151;
+}
+.dataTables_wrapper .dataTables_filter input {
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    padding: 0.35rem 0.6rem;
+    margin-left: 0.5rem;
+    font-size: 0.8125rem;
+}
+.dataTables_wrapper .dataTables_length select {
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    padding: 0.35rem 0.5rem;
+    margin: 0 0.5rem;
+    font-size: 0.8125rem;
+}
+.dataTables_wrapper {
+    overflow-x: visible !important;
+    overflow-y: visible !important;
+}
+
+.dataTables_wrapper .dataTables_scroll,
+.dataTables_wrapper .dataTables_scrollBody {
+    /* Si existe scroll body de DataTables, forzarlo a no crear barra vertical propia */
+    max-height: none !important;
+    height: auto !important;
+    overflow-y: visible !important;
+}
+
+/* Fila inferior de DataTables (info + paginación): layout fijo, mismo estilo que reportes */
+.dt-bottom-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e5e7eb;
+    width: 100%;
+}
+.dt-bottom-row .dataTables_info,
+.dt-bottom-row .dataTables_paginate,
+.dataTables_wrapper .dataTables_info {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    color: #374151;
+    margin: 0;
+}
+.dt-bottom-row .dataTables_paginate {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem;
+}
+/* Paginación global: mismo estilo que reportes (todas las tablas) */
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    padding: 0.5rem 1rem !important;
+    margin: 0 0.25rem;
+    border-radius: 0.5rem;
+    border: 1px solid #d1d5db !important;
+    font-size: 0.875rem;
+    background: #fff;
+    cursor: pointer;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background: linear-gradient(180deg, #1e3a8a 0%, #1e40af 100%) !important;
+    color: white !important;
+    border: 1px solid #1e40af !important;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    background: #eff6ff !important;
+    color: #1d4ed8 !important;
+}
+/* Ocultar fila superior del dom cuando length/filter se movieron al toolbar */
+.dt-top-row:empty {
+    display: none !important;
+}
+.dataTables_wrapper .dt-top-row:not(:has(.dataTables_length)) {
+    display: none !important;
+}
+
+/* Iconos de ordenamiento visibles sobre cabecera azul (sidebar) */
+table.dataTable.data-table.config-table thead .sorting:before,
+table.dataTable.data-table.config-table thead .sorting:after,
+table.dataTable.data-table.config-table thead .sorting_asc:before,
+table.dataTable.data-table.config-table thead .sorting_asc:after,
+table.dataTable.data-table.config-table thead .sorting_desc:before,
+table.dataTable.data-table.config-table thead .sorting_desc:after,
+.dataTables_scrollHead table.dataTable thead .sorting:before,
+.dataTables_scrollHead table.dataTable thead .sorting:after,
+.dataTables_scrollHead table.dataTable thead .sorting_asc:before,
+.dataTables_scrollHead table.dataTable thead .sorting_asc:after,
+.dataTables_scrollHead table.dataTable thead .sorting_desc:before,
+.dataTables_scrollHead table.dataTable thead .sorting_desc:after {
+    color: rgba(255, 255, 255, 0.55) !important;
+    opacity: 1 !important;
+}
+
+table.dataTable thead .sorting:before,
+table.dataTable thead .sorting_asc:before,
+table.dataTable thead .sorting_desc:before,
+table.dataTable thead .sorting:after,
+table.dataTable thead .sorting_asc:after,
+table.dataTable thead .sorting_desc:after {
+    color: #64748b !important;
+}
+
+/* Configuración: sin UI de ordenamiento en cabeceras */
+.dashboard-tabla-wrapper table.dataTable thead .sorting:before,
+.dashboard-tabla-wrapper table.dataTable thead .sorting_asc:before,
+.dashboard-tabla-wrapper table.dataTable thead .sorting_desc:before,
+.dashboard-tabla-wrapper table.dataTable thead .sorting:after,
+.dashboard-tabla-wrapper table.dataTable thead .sorting_asc:after,
+.dashboard-tabla-wrapper table.dataTable thead .sorting_desc:after {
+    display: none !important;
+    content: none !important;
+}
+.dashboard-tabla-wrapper table.dataTable thead th.sorting,
+.dashboard-tabla-wrapper table.dataTable thead th.sorting_asc,
+.dashboard-tabla-wrapper table.dataTable thead th.sorting_desc {
+    cursor: default !important;
+    pointer-events: none;
+}
+
+/* ========== Vista Lista/Iconos: toolbar unificado (reportes, seguimiento, necropsias, tracking, programas, cronograma) ========== */
+.toolbar-vista-row,
+.reportes-toolbar-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    overflow: visible;
+}
+/* view-toggle-* → dashboard-vista-tabla-iconos.css (única definición) */
+
+/* Paneles y badges reutilizables (configuración, asignación zonas, etc.) */
+.config-panel-head {
+    border-bottom: 1px solid #e5e7eb;
+    background: #f9fafb;
+}
+.config-panel-head .font-semibold {
+    color: #1f2937;
+}
+.config-panel-subtitle {
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin-top: 0.15rem;
+}
+.badge-cargo {
+    display: inline-block;
+    padding: 0.2rem 0.55rem;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+.badge-cargo--doctor {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+.badge-cargo--adjunto {
+    background: #e0e7ff;
+    color: #4338ca;
+}
+.btn-quitar-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.5rem;
+    color: #e11d48;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+}
+.btn-quitar-icon:hover {
+    background: #fff1f2;
+    color: #be123c;
+}
+.select-config-wrap .select2-container {
+    width: 100% !important;
+}
+.select-config-wrap .select2-container--default .select2-selection--single {
+    min-height: 42px;
+    border-radius: 0.5rem;
+    border: 1px solid #d1d5db;
+    padding: 4px 8px;
+}
+
+/* Pestañas subrayadas (secciones de formulario; patrón necropsias, acento azul configuración) */
+.sip-tabs-nav,
+.necropsia-tabs-nav {
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 1rem;
+}
+.sip-tabs-nav nav,
+.necropsia-tabs-nav nav {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.25rem 2rem;
+    margin-bottom: -1px;
+}
+.sip-tabs-nav .tab-button,
+.necropsia-tabs-nav .tab-button {
+    background: transparent;
+    border: none;
+    border-bottom: 4px solid transparent;
+    padding: 0.75rem 0.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #6b7280;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 0.2s ease, border-color 0.2s ease;
+}
+.sip-tabs-nav .tab-button:hover,
+.necropsia-tabs-nav .tab-button:not(.active):hover {
+    color: #374151;
+    border-bottom-color: #d1d5db;
+}
+.sip-tabs-nav .tab-button.active {
+    color: #2563eb;
+    border-bottom-color: #2563eb;
+    font-weight: 600;
+}
+/* Necropsias registro/listado mantienen acento verde vía clases Tailwind en el HTML */
+
+/*
+ * Controles Mostrar/Buscar: clases estándar .toolbar-dt-controls (lista) y
+ * .toolbar-iconos-controls (iconos). Compatibilidad: hijos directos de la fila toolbar
+ * con id que termina en DtControls / IconosControls (módulos legacy sin clase).
+ */
+.toolbar-dt-controls,
+.reportes-toolbar-row > [id$="DtControls"],
+.toolbar-vista-row > [id$="DtControls"] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1rem;
+}
+.toolbar-dt-controls .dataTables_length,
+.toolbar-dt-controls .dataTables_filter,
+.reportes-toolbar-row > [id$="DtControls"] .dataTables_length,
+.reportes-toolbar-row > [id$="DtControls"] .dataTables_filter,
+.toolbar-vista-row > [id$="DtControls"] .dataTables_length,
+.toolbar-vista-row > [id$="DtControls"] .dataTables_filter {
+    margin: 0;
+    padding: 0;
+    float: none;
+}
+.toolbar-dt-controls .dataTables_length label,
+.toolbar-dt-controls .dataTables_filter label,
+.reportes-toolbar-row > [id$="DtControls"] .dataTables_length label,
+.reportes-toolbar-row > [id$="DtControls"] .dataTables_filter label,
+.toolbar-vista-row > [id$="DtControls"] .dataTables_length label,
+.toolbar-vista-row > [id$="DtControls"] .dataTables_filter label {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: normal;
+    color: #374151;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.toolbar-dt-controls .dataTables_length select,
+.reportes-toolbar-row > [id$="DtControls"] .dataTables_length select,
+.toolbar-vista-row > [id$="DtControls"] .dataTables_length select {
+    padding: 0.5rem 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    color: #374151;
+    background: white;
+    cursor: pointer;
+    min-height: 2.25rem;
+    box-sizing: border-box;
+}
+.toolbar-dt-controls .dataTables_length select:hover,
+.reportes-toolbar-row > [id$="DtControls"] .dataTables_length select:hover,
+.toolbar-vista-row > [id$="DtControls"] .dataTables_length select:hover {
+    border-color: #9ca3af;
+}
+.toolbar-dt-controls .dataTables_length select:focus,
+.reportes-toolbar-row > [id$="DtControls"] .dataTables_length select:focus,
+.toolbar-vista-row > [id$="DtControls"] .dataTables_length select:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+/* Select "Mostrar" (lista e iconos) */
+.dt-toolbar-length-select,
+.cards-length-select {
+    padding: 0.5rem 1rem !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: 0.5rem !important;
+    font-size: 0.875rem !important;
+    color: #374151 !important;
+    background: #ffffff !important;
+    cursor: pointer;
+    min-height: 2.25rem;
+    box-sizing: border-box;
+    -webkit-appearance: auto;
+    appearance: auto;
+}
+.dt-toolbar-length-select:hover,
+.cards-length-select:hover {
+    border-color: #9ca3af !important;
+}
+.dt-toolbar-length-select:focus,
+.cards-length-select:focus {
+    outline: none;
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2) !important;
+}
+.toolbar-dt-controls .dataTables_filter input,
+.reportes-toolbar-row > [id$="DtControls"] .dataTables_filter input,
+.toolbar-vista-row > [id$="DtControls"] .dataTables_filter input {
+    padding: 0.5rem 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    color: #374151;
+    min-height: 2.25rem;
+    min-width: 180px;
+    box-sizing: border-box;
+}
+.toolbar-dt-controls .dataTables_filter input:hover,
+.reportes-toolbar-row > [id$="DtControls"] .dataTables_filter input:hover,
+.toolbar-vista-row > [id$="DtControls"] .dataTables_filter input:hover {
+    border-color: #9ca3af;
+}
+.toolbar-dt-controls .dataTables_filter input:focus,
+.reportes-toolbar-row > [id$="DtControls"] .dataTables_filter input:focus,
+.toolbar-vista-row > [id$="DtControls"] .dataTables_filter input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+/* Controles modo iconos */
+.toolbar-iconos-controls,
+.reportes-toolbar-row > [id$="IconosControls"],
+.toolbar-vista-row > [id$="IconosControls"] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1rem;
+}
+.toolbar-iconos-controls label,
+.reportes-toolbar-row > [id$="IconosControls"] label,
+.toolbar-vista-row > [id$="IconosControls"] label {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: normal;
+    color: #374151;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.toolbar-iconos-controls .dataTables_length,
+.toolbar-iconos-controls .dataTables_filter,
+.reportes-toolbar-row > [id$="IconosControls"] .dataTables_length,
+.reportes-toolbar-row > [id$="IconosControls"] .dataTables_filter,
+.toolbar-vista-row > [id$="IconosControls"] .dataTables_length,
+.toolbar-vista-row > [id$="IconosControls"] .dataTables_filter {
+    margin: 0;
+    padding: 0;
+}
+.toolbar-iconos-controls .dataTables_length select,
+.toolbar-iconos-controls .dataTables_filter input,
+.toolbar-iconos-controls input[type="search"],
+.reportes-toolbar-row > [id$="IconosControls"] .dataTables_length select,
+.reportes-toolbar-row > [id$="IconosControls"] .dataTables_filter input,
+.reportes-toolbar-row > [id$="IconosControls"] input[type="search"],
+.toolbar-vista-row > [id$="IconosControls"] .dataTables_length select,
+.toolbar-vista-row > [id$="IconosControls"] .dataTables_filter input,
+.toolbar-vista-row > [id$="IconosControls"] input[type="search"] {
+    padding: 0.5rem 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    color: #374151;
+    background: #ffffff;
+    min-height: 2.25rem;
+    min-width: 180px;
+    box-sizing: border-box;
+    -webkit-appearance: auto;
+    appearance: auto;
+}
+.toolbar-iconos-controls .dataTables_length select:hover,
+.toolbar-iconos-controls .dataTables_filter input:hover,
+.toolbar-iconos-controls input[type="search"]:hover,
+.reportes-toolbar-row > [id$="IconosControls"] .dataTables_length select:hover,
+.reportes-toolbar-row > [id$="IconosControls"] .dataTables_filter input:hover,
+.reportes-toolbar-row > [id$="IconosControls"] input[type="search"]:hover {
+    border-color: #9ca3af;
+}
+.toolbar-iconos-controls .dataTables_length select:focus,
+.toolbar-iconos-controls .dataTables_filter input:focus,
+.toolbar-iconos-controls input[type="search"]:focus,
+.reportes-toolbar-row > [id$="IconosControls"] .dataTables_length select:focus,
+.reportes-toolbar-row > [id$="IconosControls"] .dataTables_filter input:focus,
+.reportes-toolbar-row > [id$="IconosControls"] input[type="search"]:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+.toolbar-iconos-row,
+[class*="iconos-toolbar-row"] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1rem;
+}
+/* En modo iconos: ocultar línea debajo del área de controles superiores (queda vacía) */
+[data-vista-tabla-iconos][data-vista="iconos"] #cardsControlsTopReportes,
+[data-vista-tabla-iconos][data-vista="iconos"] #cardsControlsTopSeg,
+[data-vista-tabla-iconos][data-vista="iconos"] #cardsControlsTopNec,
+[data-vista-tabla-iconos][data-vista="iconos"] #cardsControlsTopTrack,
+[data-vista-tabla-iconos][data-vista="iconos"] #cardsControlsTopPend {
+    border-bottom: none !important;
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+    min-height: 0;
+}
+
+/* Paginación en modo iconos: mismo aspecto que en modo tabla (números + Anterior/Siguiente) */
+.view-tarjetas-wrap .dataTables_paginate.paginate_button_wrap {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem;
+}
+.view-tarjetas-wrap .dataTables_paginate .paginate_button {
+    padding: 0.5rem 1rem !important;
+    margin: 0 0.125rem;
+    border-radius: 0.5rem;
+    border: 1px solid #d1d5db !important;
+    background: white;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: #374151;
+    transition: background 0.2s, color 0.2s;
+}
+.view-tarjetas-wrap .dataTables_paginate .paginate_button.current {
+    background: linear-gradient(180deg, #1e3a8a 0%, #1e40af 100%) !important;
+    color: white !important;
+    border-color: #1e40af !important;
+}
+.view-tarjetas-wrap .dataTables_paginate .paginate_button:hover:not(.disabled):not(.ellipsis) {
+    background: #eff6ff !important;
+    color: #1d4ed8 !important;
+}
+.view-tarjetas-wrap .dataTables_paginate .paginate_button.disabled,
+.view-tarjetas-wrap .dataTables_paginate .paginate_button.ellipsis {
+    cursor: default;
+    opacity: 0.7;
+}
+.view-tarjetas-wrap .dataTables_paginate .paginate_button.ellipsis {
+    cursor: default;
+}
+.view-tarjetas-wrap [data-table] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1rem;
+    width: 100%;
+}
+.view-tarjetas-wrap [data-table] .dataTables_info {
+    font-size: 0.875rem;
+    color: #4b5563;
+}
+.view-tarjetas-wrap [data-table] .dataTables_paginate {
+    margin: 0;
+    padding: 0;
+}
+
+/* ========== Configuración: mismo estilo que reportes (tabla + iconos) ========== */
+.dashboard-tabla-card {
+    background: #fff;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    padding: 1.25rem;
+}
+.dashboard-tabla-wrapper {
+    margin-top: 1.25rem;
+}
+/* Vista lista/iconos: mismo toggle que reportes */
+.dashboard-tabla-wrapper .view-tarjetas-wrap {
+    display: none;
+}
+.dashboard-tabla-wrapper[data-vista="iconos"] .view-lista-wrap {
+    display: none !important;
+}
+.dashboard-tabla-wrapper[data-vista="iconos"] .view-tarjetas-wrap {
+    display: block !important;
+}
+.dashboard-tabla-wrapper[data-vista="lista"] .view-tarjetas-wrap,
+.dashboard-tabla-wrapper[data-vista="tabla"] .view-tarjetas-wrap {
+    display: none !important;
+}
+.dashboard-tabla-wrapper[data-vista="lista"] .view-lista-wrap,
+.dashboard-tabla-wrapper[data-vista="tabla"] .view-lista-wrap {
+    display: block !important;
+}
+/* Controles superiores e inferiores en vista iconos (como reportes) */
+.dashboard-tabla-wrapper .view-tarjetas-wrap .cards-controls-top,
+.dashboard-tabla-wrapper #cardsControlsTopLab,
+.dashboard-tabla-wrapper #cardsControlsTopEmpTrans,
+.dashboard-tabla-wrapper [id^="cardsControlsTop"] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 0.875rem;
+    color: #4b5563;
+}
+/* Sin línea extra antes de la primera tarjeta cuando el bloque superior está vacío */
+.dashboard-tabla-wrapper .view-tarjetas-wrap [id^="cardsControlsTop"]:empty,
+.dashboard-tabla-wrapper .view-tarjetas-wrap .cards-controls-top:empty {
+    display: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    min-height: 0 !important;
+}
+.dashboard-tabla-wrapper .view-tarjetas-wrap [data-table],
+.dashboard-tabla-wrapper .view-tarjetas-wrap .cards-pagination,
+.dashboard-tabla-wrapper #cardsPaginationLab,
+.dashboard-tabla-wrapper #cardsPaginationEmpTrans,
+.dashboard-tabla-wrapper [id$="cardsPagination"] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1rem;
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #e5e7eb;
+    font-size: 0.875rem;
+    color: #4b5563;
+}
+.dashboard-tabla-wrapper .reportes-toolbar-row,
+.dashboard-tabla-wrapper .toolbar-vista-row {
+    margin-bottom: 1rem;
+}
+
+/* Indicador de carga DataTables (puntos animados — reportes, necropsias, seguimiento, etc.) */
+.tabla-listado-wrapper .table-wrapper,
+[data-vista-tabla-iconos] .view-lista-wrap .table-wrapper {
+    position: relative;
+    min-height: 10rem;
+}
+[data-vista-tabla-iconos] .dataTables_wrapper {
+    position: relative;
+}
+[data-vista-tabla-iconos] .dataTables_wrapper .dataTables_processing {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    left: 0 !important;
+    top: 0 !important;
+    padding: 1.5rem;
+    background: rgba(255, 255, 255, 0.88);
+    border-radius: 0.75rem;
+    box-shadow: none;
+}
+.sip-carga-espera-dt {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.65rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+    text-align: center;
+}
+.sip-carga-espera-cards {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-height: 10rem;
+    padding: 2rem 1rem;
+}
+
+/* Tarjetas KPI / resumen (mortalidad listado, auditoría, informe) */
+.resumen-card {
+    background: #ffffff;
+    border-radius: 1rem;
+    border: 1px solid #e5e7eb;
+    padding: 1rem 1.25rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+.resumen-card .valor {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #111827;
+}
+.resumen-card .etiqueta {
+    font-size: 0.8rem;
+    color: #6b7280;
+}
+html[data-theme="dark"] .resumen-card {
+    background: #18181b !important;
+    border: 1px solid #3f3f46 !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35) !important;
+}
+html[data-theme="dark"] .resumen-card .valor {
+    color: #f4f4f5 !important;
+}
+html[data-theme="dark"] .resumen-card .etiqueta {
+    color: #a1a1aa !important;
+}
+
+.sip-carga-espera-puntos {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+}
+.sip-carga-espera-puntos i {
+    display: block;
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 50%;
+    background: #2563eb;
+    animation: sip-carga-espera-punto 1.2s infinite ease-in-out both;
+}
+.sip-carga-espera-puntos i:nth-child(1) { animation-delay: -0.32s; }
+.sip-carga-espera-puntos i:nth-child(2) { animation-delay: -0.16s; }
+.sip-carga-espera-puntos i:nth-child(3) { animation-delay: 0s; }
+@keyframes sip-carga-espera-punto {
+    0%, 80%, 100% { transform: scale(0.55); opacity: 0.45; }
+    40% { transform: scale(1); opacity: 1; }
+}
+html[data-theme="dark"] [data-vista-tabla-iconos] .dataTables_wrapper .dataTables_processing {
+    background: rgba(24, 24, 27, 0.9);
+}
+html[data-theme="dark"] .sip-carga-espera-dt {
+    color: #e4e4e7;
+}
+html[data-theme="dark"] .sip-carga-espera-puntos i {
+    background: #60a5fa;
+}
+.hc-align-right { text-align: right !important; }

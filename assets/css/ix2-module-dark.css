@@ -1,0 +1,2366 @@
+/**
+ * Tema oscuro para módulos (iframe / ?ix2_theme=dark). Requiere html[data-theme="dark"]
+ * (includes/ix2_head_theme_snippet.php + cookie/localStorage del host).
+ *
+ * Capas CSS del proyecto: css/output.css (Tailwind) → css/sip-global-theme.css (tokens/hover tarjetas
+ * donde se enlace) → ESTE archivo (overrides oscuros). Nuevas hojas de tema: preferir /css/, no assets/css
+ * (allí hay copias legacy p. ej. Datatables). Variables --ix2m-* son la referencia para fondos/bordes.
+ */
+html[data-theme="dark"] {
+    color-scheme: dark;
+    --ix2m-bg: #09090b;
+    --ix2m-surface: #18181b;
+    --ix2m-elevated: #27272a;
+    --ix2m-border: #3f3f46;
+    --ix2m-border-soft: #52525b;
+    --ix2m-text: #f4f4f5;
+    --ix2m-muted: #a1a1aa;
+    --ix2m-accent: #a1a1aa;
+    --ix2m-accent-dim: rgba(255, 255, 255, 0.1);
+    --ix2m-input-bg: #18181b;
+    --ix2m-row: #27272a;
+    --ix2m-row-alt: #3f3f46;
+    --ix2m-row-hover: rgba(255, 255, 255, 0.055);
+    --ix2m-danger: #f87171;
+    /* Modal: panel más claro que el fondo para que destaque */
+    --ix2m-modal-overlay: rgba(0, 0, 0, 0.82);
+    --ix2m-modal-panel: #27272a;
+    --ix2m-modal-border: rgba(255, 255, 255, 0.12);
+    --ix2m-modal-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 25px 60px -12px rgba(0, 0, 0, 0.9);
+}
+
+html[data-theme="dark"] body {
+    background: var(--ix2m-bg) !important;
+    color: var(--ix2m-text) !important;
+}
+
+/*
+ * Scrollbars en modo oscuro: documento + cualquier scroll (overflow).
+ * scrollbar-color no se hereda de forma fiable en todos los casos; WebKit requiere pseudo-elementos por elemento.
+ * color-scheme: dark ya está en html; esto unifica Chrome/Edge/Safari y Firefox.
+ */
+html[data-theme="dark"],
+html[data-theme="dark"] body {
+    scrollbar-width: thin;
+    scrollbar-color: var(--ix2m-border-soft) var(--ix2m-bg);
+}
+html[data-theme="dark"]::-webkit-scrollbar,
+html[data-theme="dark"] *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+html[data-theme="dark"]::-webkit-scrollbar-track,
+html[data-theme="dark"] *::-webkit-scrollbar-track {
+    background: var(--ix2m-bg);
+    border-radius: 5px;
+}
+html[data-theme="dark"]::-webkit-scrollbar-thumb,
+html[data-theme="dark"] *::-webkit-scrollbar-thumb {
+    background: var(--ix2m-border-soft);
+    border-radius: 5px;
+}
+html[data-theme="dark"]::-webkit-scrollbar-thumb:hover,
+html[data-theme="dark"] *::-webkit-scrollbar-thumb:hover {
+    background: var(--ix2m-muted);
+}
+
+/* Texto Tailwind habitual en dashboards */
+html[data-theme="dark"] .text-gray-900,
+html[data-theme="dark"] .text-gray-800,
+html[data-theme="dark"] .text-gray-700,
+html[data-theme="dark"] .text-slate-900,
+html[data-theme="dark"] .text-slate-800,
+html[data-theme="dark"] .text-slate-700 {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .text-gray-600,
+html[data-theme="dark"] .text-gray-500,
+html[data-theme="dark"] .text-slate-600,
+html[data-theme="dark"] .text-slate-500 {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] .text-gray-400,
+html[data-theme="dark"] .text-slate-400 {
+    color: #7d8a9e !important;
+}
+
+/* Labels y títulos de bloque */
+html[data-theme="dark"] label,
+html[data-theme="dark"] .block.text-sm.font-medium,
+html[data-theme="dark"] .font-medium.text-gray-700,
+html[data-theme="dark"] .font-medium.text-gray-800,
+html[data-theme="dark"] h1,
+html[data-theme="dark"] h2,
+html[data-theme="dark"] h3,
+html[data-theme="dark"] h4,
+html[data-theme="dark"] .card-head,
+html[data-theme="dark"] .modal-head h4 {
+    color: var(--ix2m-text) !important;
+}
+
+/* Campos de formulario */
+html[data-theme="dark"] input[type="text"],
+html[data-theme="dark"] input[type="search"],
+html[data-theme="dark"] input[type="email"],
+html[data-theme="dark"] input[type="password"],
+html[data-theme="dark"] input[type="number"],
+html[data-theme="dark"] input[type="date"],
+html[data-theme="dark"] input[type="datetime-local"],
+html[data-theme="dark"] input[type="month"],
+html[data-theme="dark"] input[type="time"],
+html[data-theme="dark"] input[type="tel"],
+html[data-theme="dark"] input[type="url"],
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] .form-control,
+html[data-theme="dark"] .cal-view-select,
+html[data-theme="dark"] .cal-nav-btn {
+    background-color: var(--ix2m-input-bg) !important;
+    color: var(--ix2m-text) !important;
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder {
+    color: var(--ix2m-muted) !important;
+    opacity: 0.9;
+}
+html[data-theme="dark"] input:focus,
+html[data-theme="dark"] select:focus,
+html[data-theme="dark"] textarea:focus,
+html[data-theme="dark"] .form-control:focus {
+    border-color: var(--ix2m-accent) !important;
+    box-shadow: 0 0 0 2px var(--ix2m-accent-dim) !important;
+    outline: none !important;
+}
+
+/* Select nativo: sin transición (evita parpadeo claro→oscuro al abrir) + tema para lista desplegable */
+html[data-theme="dark"] select,
+html[data-theme="dark"] select:focus,
+html[data-theme="dark"] select:active {
+    color-scheme: dark !important;
+    transition: none !important;
+}
+html[data-theme="dark"] option {
+    color-scheme: dark;
+    background-color: var(--ix2m-surface);
+    color: var(--ix2m-text);
+    transition: none !important;
+}
+
+/* Select2 */
+html[data-theme="dark"] .select2-container--default .select2-selection--single,
+html[data-theme="dark"] .select2-container--default .select2-selection--multiple {
+    background-color: var(--ix2m-input-bg) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .select2-container--default .select2-selection--single .select2-selection__rendered {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .select2-container--default .select2-selection--single .select2-selection__arrow b {
+    border-color: var(--ix2m-muted) transparent transparent transparent !important;
+}
+html[data-theme="dark"] .select2-dropdown {
+    background-color: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background-color: var(--ix2m-accent) !important;
+    color: #fff !important;
+}
+html[data-theme="dark"] .select2-container--default .select2-results__option[aria-selected="true"] {
+    background-color: var(--ix2m-row-alt) !important;
+}
+
+/* Fondos claros habituales */
+html[data-theme="dark"] .bg-white,
+html[data-theme="dark"] .bg-gray-50,
+html[data-theme="dark"] .bg-slate-50,
+html[data-theme="dark"] .bg-zinc-50,
+html[data-theme="dark"] .bg-gray-100,
+html[data-theme="dark"] .bg-slate-100 {
+    background-color: var(--ix2m-surface) !important;
+}
+html[data-theme="dark"] .bg-gray-200,
+html[data-theme="dark"] .bg-slate-200 {
+    background-color: var(--ix2m-elevated) !important;
+}
+
+/* Bordes */
+html[data-theme="dark"] .border-gray-100,
+html[data-theme="dark"] .border-gray-200,
+html[data-theme="dark"] .border-gray-300,
+html[data-theme="dark"] .border-slate-200,
+html[data-theme="dark"] .border-slate-300,
+html[data-theme="dark"] .border {
+    border-color: var(--ix2m-border) !important;
+}
+
+/* Cards y filtros */
+html[data-theme="dark"] .card-filtros-compacta,
+html[data-theme="dark"] .dashboard-tabla-card,
+html[data-theme="dark"] .cal-toolbar,
+html[data-theme="dark"] .cal-main,
+html[data-theme="dark"] .save-all-section,
+html[data-theme="dark"] .card {
+    background-color: var(--ix2m-surface) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35) !important;
+}
+html[data-theme="dark"] .card-head,
+html[data-theme="dark"] .border-b.border-gray-200,
+html[data-theme="dark"] .border-b.border-gray-100 {
+    border-bottom-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] .card-filtros-compacta .border-b {
+    border-color: var(--ix2m-border) !important;
+}
+
+/* DataTables */
+html[data-theme="dark"] table.dataTable,
+html[data-theme="dark"] table.dataTable.no-footer {
+    border-bottom-color: var(--ix2m-border) !important;
+}
+/* DataTables: cabecera = mismo azul que sidebar (scrollHead / tabla sin scroll) */
+html[data-theme="dark"] table.dataTable.data-table.config-table > thead > tr > th,
+html[data-theme="dark"] table.dataTable.data-table.config-table > thead > tr > td,
+html[data-theme="dark"] .dataTables_scrollHead table.dataTable thead th,
+html[data-theme="dark"] .dataTables_scrollHead table.dataTable thead td,
+html[data-theme="dark"] .data-table.config-table thead th,
+html[data-theme="dark"] .data-table thead th,
+html[data-theme="dark"] .config-table thead th {
+    background-color: var(--pa-table-head-bg) !important;
+    background: var(--pa-table-head-bg) !important;
+    color: var(--pa-table-head-fg) !important;
+    border-bottom: 1px solid var(--pa-table-head-border) !important;
+}
+html[data-theme="dark"] table.dataTable tbody th,
+html[data-theme="dark"] table.dataTable tbody td {
+    background-color: var(--ix2m-surface) !important;
+    color: var(--ix2m-text) !important;
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] table.dataTable.stripe tbody tr.odd,
+html[data-theme="dark"] table.dataTable.display tbody tr.odd {
+    background-color: var(--ix2m-row) !important;
+}
+html[data-theme="dark"] table.dataTable.stripe tbody tr.even,
+html[data-theme="dark"] table.dataTable.display tbody tr.even {
+    background-color: var(--ix2m-surface) !important;
+}
+/* Hover fila DataTables: leve aclarado neutro (sin tinte azul ni sombra lateral) */
+html[data-theme="dark"] table.dataTable.hover tbody tr:hover,
+html[data-theme="dark"] table.dataTable.display tbody tr:hover {
+    background-color: transparent !important;
+    box-shadow: none !important;
+}
+html[data-theme="dark"] table.dataTable.stripe tbody tr.odd:hover td,
+html[data-theme="dark"] table.dataTable.stripe tbody tr.odd:hover th,
+html[data-theme="dark"] table.dataTable.display tbody tr.odd:hover td,
+html[data-theme="dark"] table.dataTable.display tbody tr.odd:hover th {
+    background-color: #34343a !important;
+    box-shadow: none !important;
+    transition: none !important;
+}
+html[data-theme="dark"] table.dataTable.stripe tbody tr.even:hover td,
+html[data-theme="dark"] table.dataTable.stripe tbody tr.even:hover th,
+html[data-theme="dark"] table.dataTable.display tbody tr.even:hover td,
+html[data-theme="dark"] table.dataTable.display tbody tr.even:hover th {
+    background-color: #222226 !important;
+    box-shadow: none !important;
+    transition: none !important;
+}
+html[data-theme="dark"] table.dataTable tbody tr:not(.odd):not(.even):hover td,
+html[data-theme="dark"] table.dataTable tbody tr:not(.odd):not(.even):hover th {
+    background-color: #26262b !important;
+    box-shadow: none !important;
+    transition: none !important;
+}
+html[data-theme="dark"] .dataTables_wrapper .dataTables_length,
+html[data-theme="dark"] .dataTables_wrapper .dataTables_filter,
+html[data-theme="dark"] .dataTables_wrapper .dataTables_info,
+html[data-theme="dark"] .dataTables_wrapper .dataTables_paginate {
+    color: var(--ix2m-muted) !important;
+}
+/* DataTables: vence fondos claros de dashboard-config (footer, toolbars, vista iconos) */
+html[data-theme="dark"] .dataTables_wrapper .dataTables_length label,
+html[data-theme="dark"] .dataTables_wrapper .dataTables_filter label {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] .dataTables_wrapper .dataTables_filter input,
+html[data-theme="dark"] .dataTables_wrapper .dataTables_length select {
+    background-color: var(--ix2m-surface) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .dataTables_wrapper .dataTables_info,
+html[data-theme="dark"] .dt-bottom-row .dataTables_info {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] .dt-bottom-row {
+    border-top-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] .dataTables_wrapper .dataTables_paginate .paginate_button:not(.current) {
+    background: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background: linear-gradient(180deg, #1e3a8a 0%, #1e40af 100%) !important;
+    color: #fff !important;
+    border-color: #1e40af !important;
+}
+html[data-theme="dark"] .dataTables_wrapper .dataTables_paginate .paginate_button:hover:not(.disabled):not(.ellipsis):not(.current) {
+    background: var(--ix2m-row-alt) !important;
+    border-color: var(--ix2m-border) !important;
+    color: #93c5fd !important;
+}
+html[data-theme="dark"] .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+    background: linear-gradient(180deg, #1e3a8a 0%, #1e40af 100%) !important;
+    color: #fff !important;
+    border-color: #1e40af !important;
+}
+html[data-theme="dark"] .dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
+    opacity: 0.45 !important;
+}
+
+/* Toolbar Mostrar/Buscar (clases + contenedores legacy en .reportes-toolbar-row) */
+html[data-theme="dark"] .toolbar-dt-controls .dataTables_length label,
+html[data-theme="dark"] .toolbar-dt-controls .dataTables_filter label,
+html[data-theme="dark"] .reportes-toolbar-row > [id$="DtControls"] .dataTables_length label,
+html[data-theme="dark"] .reportes-toolbar-row > [id$="DtControls"] .dataTables_filter label,
+html[data-theme="dark"] .toolbar-vista-row > [id$="DtControls"] .dataTables_length label,
+html[data-theme="dark"] .toolbar-vista-row > [id$="DtControls"] .dataTables_filter label {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] .toolbar-dt-controls .dataTables_length select,
+html[data-theme="dark"] .reportes-toolbar-row > [id$="DtControls"] .dataTables_length select,
+html[data-theme="dark"] .toolbar-vista-row > [id$="DtControls"] .dataTables_length select,
+html[data-theme="dark"] .toolbar-dt-controls .dataTables_filter input,
+html[data-theme="dark"] .reportes-toolbar-row > [id$="DtControls"] .dataTables_filter input,
+html[data-theme="dark"] .toolbar-vista-row > [id$="DtControls"] .dataTables_filter input {
+    background: var(--ix2m-surface) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .dt-toolbar-length-select,
+html[data-theme="dark"] .cards-length-select {
+    background: var(--ix2m-surface) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .dt-toolbar-length-select:hover,
+html[data-theme="dark"] .cards-length-select:hover {
+    border-color: var(--ix2m-border-soft) !important;
+}
+html[data-theme="dark"] .dt-toolbar-length-select:focus,
+html[data-theme="dark"] .cards-length-select:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25) !important;
+}
+html[data-theme="dark"] .toolbar-iconos-controls label,
+html[data-theme="dark"] .reportes-toolbar-row > [id$="IconosControls"] label,
+html[data-theme="dark"] .toolbar-vista-row > [id$="IconosControls"] label {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] .toolbar-iconos-controls .dataTables_length select,
+html[data-theme="dark"] .toolbar-iconos-controls .dataTables_filter input,
+html[data-theme="dark"] .toolbar-iconos-controls input[type="search"],
+html[data-theme="dark"] .reportes-toolbar-row > [id$="IconosControls"] .dataTables_length select,
+html[data-theme="dark"] .reportes-toolbar-row > [id$="IconosControls"] .dataTables_filter input,
+html[data-theme="dark"] .reportes-toolbar-row > [id$="IconosControls"] input[type="search"],
+html[data-theme="dark"] .toolbar-vista-row > [id$="IconosControls"] .dataTables_length select,
+html[data-theme="dark"] .toolbar-vista-row > [id$="IconosControls"] .dataTables_filter input,
+html[data-theme="dark"] .toolbar-vista-row > [id$="IconosControls"] input[type="search"] {
+    background: var(--ix2m-surface) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .view-tarjetas-wrap .dataTables_paginate .paginate_button:not(.current) {
+    background: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .view-tarjetas-wrap .dataTables_paginate .paginate_button.current {
+    background: linear-gradient(180deg, #1e3a8a 0%, #1e40af 100%) !important;
+    color: #fff !important;
+    border-color: #1e40af !important;
+}
+html[data-theme="dark"] .view-tarjetas-wrap .dataTables_paginate .paginate_button:hover:not(.disabled):not(.ellipsis):not(.current) {
+    background: var(--ix2m-row-alt) !important;
+    color: #93c5fd !important;
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] .view-tarjetas-wrap .dataTables_paginate .paginate_button.current:hover {
+    background: linear-gradient(180deg, #1e3a8a 0%, #1e40af 100%) !important;
+    color: #fff !important;
+    border-color: #1e40af !important;
+}
+html[data-theme="dark"] .view-tarjetas-wrap [data-table] .dataTables_info {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] .view-tarjetas-wrap .cards-length-select {
+    background: var(--ix2m-surface) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .view-tarjetas-wrap [id^="cardsControlsTop"] button:not(:disabled):hover,
+html[data-theme="dark"] .view-tarjetas-wrap [id^="cardsPagination"] button:not(:disabled):hover {
+    background: var(--ix2m-row-alt) !important;
+}
+html[data-theme="dark"] .sip-dt-nav-btn {
+    background-color: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .sip-dt-nav-btn:hover:not(:disabled) {
+    background-color: var(--ix2m-row-alt) !important;
+}
+
+/* Paginación ad-hoc (Anterior/Siguiente con Tailwind border-gray-300, sin .paginate_button) */
+html[data-theme="dark"] button[type="button"].border-gray-300 {
+    background-color: var(--ix2m-elevated) !important;
+    color: var(--ix2m-text) !important;
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] button[type="button"].border-gray-300:hover:not(:disabled) {
+    background-color: var(--ix2m-row-alt) !important;
+}
+
+/* Vista iconos / tarjetas */
+html[data-theme="dark"] .view-toggle-btn {
+    background: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .view-toggle-btn:hover {
+    background: var(--ix2m-row-alt) !important;
+}
+html[data-theme="dark"] .view-toggle-btn.active {
+    background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%) !important;
+    color: #f8fafc !important;
+    border-color: #1e40af !important;
+}
+html[data-theme="dark"] .view-toggle-btn.active:hover {
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
+    border-color: #1d4ed8 !important;
+}
+html[data-theme="dark"] .sip-tabs-nav,
+html[data-theme="dark"] .necropsia-tabs-nav {
+    border-bottom-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] .sip-tabs-nav .tab-button:not(.active) {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] .sip-tabs-nav .tab-button:not(.active):hover {
+    color: var(--ix2m-text) !important;
+    border-bottom-color: var(--ix2m-border-soft) !important;
+}
+html[data-theme="dark"] .sip-tabs-nav .tab-button.active {
+    color: #93c5fd !important;
+    border-bottom-color: #3b82f6 !important;
+}
+html[data-theme="dark"] .cards-grid.cards-grid-iconos .card-item {
+    background: var(--ix2m-surface) !important;
+    border: 1px solid var(--ix2m-border) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease,
+        background-color 0.2s ease !important;
+}
+html[data-theme="dark"] .cards-grid.cards-grid-iconos .card-item:hover,
+html[data-theme="dark"] .cards-grid.cards-grid-iconos .card-item:focus-within,
+html[data-theme="dark"] .card-item:hover,
+html[data-theme="dark"] .card-item:focus-within {
+    transform: translateY(-4px) !important;
+    background-color: var(--sip-card-lista-hover-bg, rgba(14, 165, 233, 0.16)) !important;
+    border-color: var(--sip-card-lista-hover-border, rgba(56, 189, 248, 0.55)) !important;
+    box-shadow:
+        0 14px 44px var(--sip-card-lista-hover-shadow, rgba(0, 0, 0, 0.5)),
+        0 0 0 2px var(--sip-card-lista-hover-ring, rgba(56, 189, 248, 0.4)) !important;
+}
+html[data-theme="dark"] .cards-grid.cards-grid-iconos .card-item:hover .card-campos,
+html[data-theme="dark"] .cards-grid.cards-grid-iconos .card-item:focus-within .card-campos,
+html[data-theme="dark"] .view-lista-wrap .card-item:hover .card-campos,
+html[data-theme="dark"] .view-lista-wrap .card-item:focus-within .card-campos {
+    background: var(--sip-card-lista-campos-hover-bg, rgba(14, 165, 233, 0.14)) !important;
+    box-shadow: inset 0 0 0 1px var(--sip-card-lista-campos-inset, rgba(56, 189, 248, 0.26)) !important;
+}
+html[data-theme="dark"] .cards-grid.cards-grid-iconos .card-item .card-numero-row {
+    color: #d4d4d8 !important;
+    border-bottom-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] .cards-grid.cards-grid-iconos .card-item .card-codigo {
+    color: #f4f4f5 !important;
+}
+html[data-theme="dark"] .cards-grid.cards-grid-iconos .card-item .card-campos {
+    background: var(--ix2m-row) !important;
+}
+html[data-theme="dark"] .cards-grid.cards-grid-iconos .card-item .card-row .label {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] .cards-grid.cards-grid-iconos .card-item .card-acciones {
+    border-top-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] .dashboard-tabla-wrapper .view-tarjetas-wrap .cards-controls-top,
+html[data-theme="dark"] .dashboard-tabla-wrapper .view-tarjetas-wrap [data-table],
+html[data-theme="dark"] .dashboard-tabla-wrapper .view-tarjetas-wrap .cards-pagination {
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-muted) !important;
+}
+
+/* Modales (.modal-overlay / .modal-box) */
+html[data-theme="dark"] .modal-overlay {
+    background: var(--ix2m-modal-overlay) !important;
+}
+html[data-theme="dark"] .modal-overlay.visible {
+    background: var(--ix2m-modal-overlay) !important;
+}
+html[data-theme="dark"] .modal-box {
+    background: var(--ix2m-modal-panel) !important;
+    color: var(--ix2m-text) !important;
+    border: 1px solid var(--ix2m-modal-border) !important;
+    box-shadow: var(--ix2m-modal-shadow) !important;
+}
+html[data-theme="dark"] .modal-head,
+html[data-theme="dark"] .modal-foot {
+    border-color: var(--ix2m-border) !important;
+    background: var(--ix2m-elevated) !important;
+}
+html[data-theme="dark"] .modal-body {
+    background: var(--ix2m-modal-panel) !important;
+    color: var(--ix2m-text) !important;
+}
+/* Misma convención que arriba pero clase .modal-header (listados / cronograma) */
+html[data-theme="dark"] .modal-overlay .modal-header {
+    background: var(--ix2m-elevated) !important;
+    border-bottom-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .modal-overlay .modal-header .text-gray-800,
+html[data-theme="dark"] .modal-overlay .modal-header h3 {
+    color: var(--ix2m-text) !important;
+}
+
+/* Backdrops personalizados (p. ej. estándares granja) */
+html[data-theme="dark"] .modal-backdrop {
+    background: var(--ix2m-modal-overlay) !important;
+}
+
+/* Modales Tailwind: fondo negro semitransparente — subir opacidad */
+html[data-theme="dark"] .bg-black.bg-opacity-50 {
+    --tw-bg-opacity: 1 !important;
+    background-color: rgba(0, 0, 0, 0.82) !important;
+}
+html[data-theme="dark"] .bg-black.bg-opacity-40 {
+    --tw-bg-opacity: 1 !important;
+    background-color: rgba(0, 0, 0, 0.78) !important;
+}
+html[data-theme="dark"] .bg-black.bg-opacity-75 {
+    --tw-bg-opacity: 1 !important;
+    background-color: rgba(0, 0, 0, 0.88) !important;
+}
+/* Tailwind v3: clase bg-black/50 en HTML (barra escapada en CSS) */
+html[data-theme="dark"] .bg-black\/50 {
+    background-color: rgba(0, 0, 0, 0.82) !important;
+}
+html[data-theme="dark"] .bg-black\/80 {
+    background-color: rgba(0, 0, 0, 0.9) !important;
+}
+
+/* Contenedor interno típico del modal (sigue siendo “card” clara) */
+html[data-theme="dark"] .fixed.inset-0 .bg-white.rounded-lg,
+html[data-theme="dark"] .fixed.inset-0 .bg-white.rounded-xl,
+html[data-theme="dark"] .fixed.inset-0 .max-w-lg.bg-white,
+html[data-theme="dark"] .fixed.inset-0 .max-w-md.bg-white {
+    background-color: var(--ix2m-modal-panel) !important;
+    border: 1px solid var(--ix2m-modal-border) !important;
+    box-shadow: var(--ix2m-modal-shadow) !important;
+    color: var(--ix2m-text) !important;
+}
+
+/* SweetAlert2 */
+html[data-theme="dark"] .swal2-container.swal2-backdrop-show {
+    background: var(--ix2m-modal-overlay) !important;
+}
+html[data-theme="dark"] .swal2-popup {
+    background: var(--ix2m-modal-panel) !important;
+    color: var(--ix2m-text) !important;
+    border: 1px solid var(--ix2m-modal-border) !important;
+    box-shadow: var(--ix2m-modal-shadow) !important;
+}
+html[data-theme="dark"] .swal2-title,
+html[data-theme="dark"] .swal2-html-container {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .swal2-styled.swal2-confirm {
+    background: linear-gradient(135deg, #475569, #334155) !important;
+}
+
+/* Tablas genéricas (.table) */
+html[data-theme="dark"] table.table {
+    color: var(--ix2m-text) !important;
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] table.table th,
+html[data-theme="dark"] table.table td {
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] table.table thead th {
+    background: var(--ix2m-elevated) !important;
+    color: var(--ix2m-text) !important;
+}
+
+/* Iconos Font Awesome en botones ghost */
+html[data-theme="dark"] .text-blue-600 {
+    color: var(--ix2m-accent) !important;
+}
+html[data-theme="dark"] .text-blue-700,
+html[data-theme="dark"] .text-indigo-700 {
+    color: #cbd5e1 !important;
+}
+
+/* Enlaces */
+html[data-theme="dark"] a.text-blue-600,
+html[data-theme="dark"] a.text-blue-700 {
+    color: var(--ix2m-accent) !important;
+}
+
+/* Checkbox / radio legibles */
+html[data-theme="dark"] input[type="checkbox"],
+html[data-theme="dark"] input[type="radio"] {
+    accent-color: var(--ix2m-accent);
+}
+
+/* —— Dashboards hub (detalle en css/sip-dashboard-unified.css) —— */
+html[data-theme="dark"] .page-header-text h1,
+html[data-theme="dark"] .page-header-text .page-title {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .page-header-text p,
+html[data-theme="dark"] .page-header-text .page-sub {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] .logo-container {
+    background: var(--ix2m-elevated) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+}
+html[data-theme="dark"] .modal-box-planif {
+    background: var(--ix2m-modal-panel) !important;
+    color: var(--ix2m-text) !important;
+    border: 1px solid var(--ix2m-modal-border) !important;
+    box-shadow: var(--ix2m-modal-shadow) !important;
+}
+
+/* ========== Tablas: sin transición en celdas (evita halo al salir del hover) ========== */
+html[data-theme="dark"] table.dataTable tbody tr {
+    transition: none !important;
+}
+html[data-theme="dark"] table.dataTable tbody td,
+html[data-theme="dark"] table.dataTable tbody th {
+    transition: none !important;
+}
+html[data-theme="dark"] .data-table tbody tr,
+html[data-theme="dark"] .config-table tbody tr,
+html[data-theme="dark"] .data-table.config-table tbody tr {
+    transition: none !important;
+}
+html[data-theme="dark"] .data-table tbody td,
+html[data-theme="dark"] .config-table tbody td,
+html[data-theme="dark"] .data-table.config-table tbody td {
+    transition: none !important;
+}
+html[data-theme="dark"] .data-table tbody tr:hover,
+html[data-theme="dark"] .config-table tbody tr:hover,
+html[data-theme="dark"] .data-table.config-table tbody tr:hover {
+    box-shadow: none !important;
+    background-color: transparent !important;
+}
+html[data-theme="dark"] .data-table tbody tr:nth-child(odd):hover td,
+html[data-theme="dark"] .config-table tbody tr:nth-child(odd):hover td,
+html[data-theme="dark"] .data-table.config-table tbody tr:nth-child(odd):hover td {
+    background-color: var(--ix2m-row) !important;
+    box-shadow: none !important;
+}
+html[data-theme="dark"] .data-table tbody tr:nth-child(even):hover td,
+html[data-theme="dark"] .config-table tbody tr:nth-child(even):hover td,
+html[data-theme="dark"] .data-table.config-table tbody tr:nth-child(even):hover td {
+    background-color: var(--ix2m-surface) !important;
+    box-shadow: none !important;
+}
+
+/* Tablas unificadas: cuerpo y columnas ordenables (vence fondos #fff de dashboard-config) */
+html[data-theme="dark"] .data-table tbody tr:nth-child(odd),
+html[data-theme="dark"] .config-table tbody tr:nth-child(odd),
+html[data-theme="dark"] .data-table.config-table tbody tr:nth-child(odd),
+html[data-theme="dark"] .data-table.config-table tbody tr.odd {
+    background-color: var(--ix2m-row) !important;
+}
+html[data-theme="dark"] .data-table tbody tr:nth-child(even),
+html[data-theme="dark"] .config-table tbody tr:nth-child(even),
+html[data-theme="dark"] .data-table.config-table tbody tr:nth-child(even),
+html[data-theme="dark"] .data-table.config-table tbody tr.even {
+    background-color: var(--ix2m-surface) !important;
+}
+html[data-theme="dark"] .data-table tbody td,
+html[data-theme="dark"] .config-table tbody td,
+html[data-theme="dark"] .data-table.config-table tbody td {
+    color: var(--ix2m-text) !important;
+    border-bottom-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] .data-table tbody tr:nth-child(odd) td,
+html[data-theme="dark"] .config-table tbody tr:nth-child(odd) td,
+html[data-theme="dark"] .data-table.config-table tbody tr:nth-child(odd) td,
+html[data-theme="dark"] .data-table.config-table tbody tr.odd td,
+html[data-theme="dark"] table.dataTable.display.data-table.config-table tbody tr.odd td {
+    background-color: var(--ix2m-row) !important;
+}
+html[data-theme="dark"] .data-table tbody tr:nth-child(even) td,
+html[data-theme="dark"] .config-table tbody tr:nth-child(even) td,
+html[data-theme="dark"] .data-table.config-table tbody tr:nth-child(even) td,
+html[data-theme="dark"] .data-table.config-table tbody tr.even td,
+html[data-theme="dark"] table.dataTable.display.data-table.config-table tbody tr.even td {
+    background-color: var(--ix2m-surface) !important;
+}
+/* Columnas ordenables: sin sombra; fondo heredado de la fila (reglas tbody td arriba) */
+html[data-theme="dark"] .data-table.config-table tbody td.sorting_1,
+html[data-theme="dark"] .data-table.config-table tbody td.sorting_2,
+html[data-theme="dark"] .data-table.config-table tbody td.sorting_3,
+html[data-theme="dark"] table.dataTable.display.data-table.config-table tbody td.sorting_1,
+html[data-theme="dark"] table.dataTable.display.data-table.config-table tbody td.sorting_2,
+html[data-theme="dark"] table.dataTable.display.data-table.config-table tbody td.sorting_3,
+html[data-theme="dark"] .dataTables_wrapper table.dataTable.display.data-table.config-table tbody td.sorting_1,
+html[data-theme="dark"] .dataTables_wrapper table.dataTable.display.data-table.config-table tbody td.sorting_2,
+html[data-theme="dark"] .dataTables_wrapper table.dataTable.display.data-table.config-table tbody td.sorting_3 {
+    box-shadow: none !important;
+    color: var(--ix2m-text) !important;
+}
+
+/* Bootstrap 5: modales */
+html[data-theme="dark"] .modal-content {
+    background: var(--ix2m-modal-panel) !important;
+    color: var(--ix2m-text) !important;
+    border: 1px solid var(--ix2m-modal-border) !important;
+}
+html[data-theme="dark"] .modal-header,
+html[data-theme="dark"] .modal-footer {
+    border-color: var(--ix2m-border) !important;
+    background: var(--ix2m-elevated) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .modal-title {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .modal-body {
+    background: var(--ix2m-modal-panel) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .modal-content .btn-close {
+    filter: invert(1) grayscale(100%) brightness(1.2);
+}
+
+/* Modales Tailwind: paneles rounded-2xl / modal-mapa-inner */
+html[data-theme="dark"] .fixed.inset-0 .modal-mapa-inner.bg-white,
+html[data-theme="dark"] .fixed.inset-0 .modal-mapa-inner.rounded-xl,
+html[data-theme="dark"] .fixed.inset-0 .modal-producto-inner.bg-white,
+html[data-theme="dark"] .fixed.inset-0 .modal-inner.bg-white {
+    background-color: var(--ix2m-modal-panel) !important;
+    border: 1px solid var(--ix2m-modal-border) !important;
+    color: var(--ix2m-text) !important;
+    box-shadow: var(--ix2m-modal-shadow) !important;
+}
+html[data-theme="dark"] .btn-mapa-categoria,
+html[data-theme="dark"] button.btn-mapa-categoria {
+    background: var(--ix2m-elevated) !important;
+    color: var(--ix2m-text) !important;
+    border: 1px solid var(--ix2m-border) !important;
+}
+html[data-theme="dark"] .btn-mapa-categoria:hover,
+html[data-theme="dark"] button.btn-mapa-categoria:hover {
+    background: var(--ix2m-row-alt) !important;
+    border-color: var(--ix2m-border-soft) !important;
+}
+
+/* Cronograma registro: bloque subzonas generado por JS */
+html[data-theme="dark"] #contenedorSubzonas .zona-subzonas,
+html[data-theme="dark"] #contenedorSubzonas.sip-crono-subzonas-root .zona-subzonas {
+    background: var(--ix2m-surface) !important;
+    border: 1px solid var(--ix2m-border) !important;
+    border-radius: 0.75rem;
+    padding: 0.65rem 0.75rem;
+    margin-bottom: 0.65rem;
+}
+html[data-theme="dark"] #contenedorSubzonas .zona-subzonas-header {
+    border-bottom-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] #contenedorSubzonas .subzonas-list {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] #contenedorSubzonas .subzona-chk,
+html[data-theme="dark"] #contenedorSubzonas .chk-subzona-todas {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] #contenedorSubzonas .granja-nom {
+    color: var(--ix2m-muted) !important;
+}
+
+/* Cronograma listado: modal detalle evento (estilos claros en línea) */
+html[data-theme="dark"] .modal-detalle-evento .detalle-evento-seccion,
+html[data-theme="dark"] .modal-detalle-evento .programa-seccion {
+    background: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] .modal-detalle-evento .detalle-evento-seccion-titulo,
+html[data-theme="dark"] .modal-detalle-evento .programa-seccion-titulo,
+html[data-theme="dark"] .modal-detalle-evento .programa-cab-fila .campo dt,
+html[data-theme="dark"] .modal-detalle-evento .detalle-evento-grid dt {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] .modal-detalle-evento .detalle-evento-grid dd,
+html[data-theme="dark"] .modal-detalle-evento .programa-cab-fila .campo dd {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .modal-detalle-evento .programa-cab-detalle table th {
+    background: var(--ix2m-row-alt) !important;
+    color: var(--ix2m-text) !important;
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] .modal-detalle-evento .programa-cab-detalle table td {
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] #modalDetalles .modal-detalles-asignacion .tab-btn,
+html[data-theme="dark"] #modalDetalles .tabs-detalle .tab-btn {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] #modalDetalles .tabs-detalle .tab-btn.active {
+    color: #c7d2fe !important;
+    border-bottom-color: #818cf8 !important;
+}
+html[data-theme="dark"] #modalDetalles .tabs-detalle {
+    border-bottom-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] #modalDetalles .bg-gray-50,
+html[data-theme="dark"] #modalDetallesPrograma .bg-gray-50,
+html[data-theme="dark"] #modalDetallesCab {
+    background: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] #modalDetalles .text-gray-800,
+html[data-theme="dark"] #modalDetallesPrograma .text-gray-800 {
+    color: var(--ix2m-text) !important;
+}
+
+/* Programas listado: modal detalles */
+html[data-theme="dark"] #modalDetallesPrograma .modal-header,
+html[data-theme="dark"] #modalDetallesPrograma table thead.bg-gray-50 {
+    background: var(--ix2m-elevated) !important;
+    color: var(--ix2m-text) !important;
+    border-color: var(--ix2m-border) !important;
+}
+
+/* Calendario planificación (dashboard-calendario.php) */
+html[data-theme="dark"] body.cal-dash-body,
+html[data-theme="dark"] .cal-toolbar,
+html[data-theme="dark"] .cal-main,
+html[data-theme="dark"] .cal-sidebar {
+    background: var(--ix2m-surface) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .cal-nav-btn,
+html[data-theme="dark"] .cal-view-select {
+    background: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .cal-nav-btn:hover {
+    background: var(--ix2m-row-alt) !important;
+}
+html[data-theme="dark"] .cal-nav-label,
+html[data-theme="dark"] .leyenda-titulo,
+html[data-theme="dark"] .filter-section h4 {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .cal-dia-header,
+html[data-theme="dark"] .cal-mini .cal-dia-header {
+    background: var(--ix2m-elevated) !important;
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] .cal-dia,
+html[data-theme="dark"] .cal-mini .cal-dia {
+    background: var(--ix2m-row) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .cal-dia.cal-dia-hoy,
+html[data-theme="dark"] .cal-mini .cal-dia.hoy {
+    background: rgba(37, 99, 235, 0.22) !important;
+    border-color: #3b82f6 !important;
+}
+html[data-theme="dark"] .cal-dia.cal-dia-elegida,
+html[data-theme="dark"] .cal-mini .cal-dia.selected {
+    background: rgba(217, 119, 6, 0.2) !important;
+    border-color: #f59e0b !important;
+}
+
+/* Calendario: #calGrid (mes / semana / año / día) */
+html[data-theme="dark"] #calGrid {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] #calGrid .cal-grid {
+    background: transparent !important;
+}
+html[data-theme="dark"] #calGrid .cal-dia-header {
+    background: var(--ix2m-elevated) !important;
+    color: var(--ix2m-muted) !important;
+    border-color: transparent !important;
+}
+html[data-theme="dark"] #calGrid .cal-dia {
+    background: var(--ix2m-row) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] #calGrid .cal-dia.cal-dia-celda:hover:not(.cal-dia-hoy):not(.cal-dia-elegida) {
+    background: var(--ix2m-row-alt) !important;
+}
+html[data-theme="dark"] #calGrid .cal-dia.otro-mes {
+    background: var(--ix2m-elevated) !important;
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] #calGrid .cal-dia.cal-dia-hoy {
+    background: rgba(37, 99, 235, 0.22) !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35) !important;
+}
+html[data-theme="dark"] #calGrid .cal-dia.cal-dia-elegida {
+    background: rgba(217, 119, 6, 0.2) !important;
+    border-color: #f59e0b !important;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35) !important;
+}
+html[data-theme="dark"] #calGrid .cal-dia-num {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] #calGrid .cal-dia.otro-mes .cal-dia-num {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] #calGrid .cal-evento {
+    background: rgba(0, 0, 0, 0.2) !important;
+}
+html[data-theme="dark"] #calGrid .cal-evento:hover {
+    background: rgba(0, 0, 0, 0.32) !important;
+}
+html[data-theme="dark"] #calGrid .cal-evento-programa {
+    color: #93c5fd !important;
+}
+html[data-theme="dark"] #calGrid .cal-evento-granja {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] #calGrid .cal-vista-dia-card {
+    background: var(--ix2m-surface) !important;
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] #calGrid .cal-vista-dia-card .text-gray-800 {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] #calGrid .cal-vista-semana-dia {
+    background: var(--ix2m-row) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] #calGrid .cal-vista-semana-dia h4 {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] #calGrid .cal-vista-anio {
+    gap: 0.75rem;
+}
+html[data-theme="dark"] #calGrid .cal-vista-anio-mes .font-semibold.text-gray-700 {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] #calGrid .cal-vista-anio-mes .cal-dia-header {
+    background: var(--ix2m-elevated) !important;
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] #calGrid .cal-vista-anio-mes .cal-dia {
+    background: var(--ix2m-row) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] #calGrid .cal-vista-anio-mes .cal-dia.otro-mes {
+    background: var(--ix2m-elevated) !important;
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] #calGrid .cal-vista-anio-mes .cal-dia.has-eventos {
+    background: rgba(37, 99, 235, 0.28) !important;
+}
+html[data-theme="dark"] #calGrid .cal-vista-anio-mes .cal-dia.hoy {
+    background: rgba(251, 191, 36, 0.2) !important;
+    border-color: #fbbf24 !important;
+    box-shadow: inset 0 0 0 1px rgba(251, 191, 36, 0.45) !important;
+}
+html[data-theme="dark"] #calGrid .cal-vista-anio-mes .cal-dia.selected {
+    background: rgba(217, 119, 6, 0.22) !important;
+    box-shadow: inset 0 0 0 2px #f59e0b !important;
+}
+html[data-theme="dark"] #calGrid .cal-vista-anio-mes .cal-dia:hover:not(.hoy):not(.selected) {
+    background: var(--ix2m-row-alt) !important;
+}
+html[data-theme="dark"] #calGrid .cal-pdf-btn {
+    background: rgba(127, 29, 29, 0.25) !important;
+    border-color: rgba(248, 113, 113, 0.45) !important;
+    color: #fca5a5 !important;
+}
+html[data-theme="dark"] #calGrid .cal-pdf-btn:hover {
+    background: rgba(127, 29, 29, 0.4) !important;
+    color: #fecaca !important;
+}
+html[data-theme="dark"] #calGrid .cal-wa-btn {
+    background: rgba(20, 83, 45, 0.35) !important;
+    border-color: rgba(74, 222, 128, 0.4) !important;
+    color: #86efac !important;
+}
+html[data-theme="dark"] #calGrid .cal-wa-btn:hover {
+    background: rgba(20, 83, 45, 0.5) !important;
+    color: #bbf7d0 !important;
+}
+
+html[data-theme="dark"] .leyenda {
+    border-top-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] #calCargaOverlay {
+    background: rgba(9, 9, 11, 0.72) !important;
+}
+html[data-theme="dark"] #calCargaOverlay .cal-carga-texto {
+    color: var(--ix2m-muted) !important;
+}
+
+/* Respuesta laboratorio (style-rpt-lab.css) */
+html[data-theme="dark"] .header-section,
+html[data-theme="dark"] .sidebar-panel,
+html[data-theme="dark"] .sidebar-header {
+    background: var(--ix2m-surface) !important;
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] .header-section h1,
+html[data-theme="dark"] .sidebar-header h3,
+html[data-theme="dark"] .detail-codigo,
+html[data-theme="dark"] .upload-section h3,
+html[data-theme="dark"] .form-group label {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .header-section p,
+html[data-theme="dark"] .detail-meta,
+html[data-theme="dark"] .upload-section > p {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] .main-content,
+html[data-theme="dark"] .detail-panel,
+html[data-theme="dark"] body.style-rpt-lab-body {
+    background: var(--ix2m-bg) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .search-input,
+html[data-theme="dark"] .form-group textarea {
+    background: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .detail-card,
+html[data-theme="dark"] .empty-state,
+html[data-theme="dark"] .drop-zone {
+    background: var(--ix2m-surface) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .drop-zone:hover {
+    background: var(--ix2m-row-alt) !important;
+}
+html[data-theme="dark"] .btn-secondary {
+    background: var(--ix2m-elevated) !important;
+    color: var(--ix2m-text) !important;
+    border-color: var(--ix2m-border) !important;
+}
+
+/* FullCalendar tracking (dashboard-tracking.php) */
+html[data-theme="dark"] #calendarioTracking {
+    --fc-page-bg-color: #09090b;
+    --fc-neutral-bg-color: #18181b;
+    --fc-neutral-text-color: #a1a1aa;
+    --fc-border-color: #3f3f46;
+    --fc-button-text-color: #e4e4e7;
+    --fc-button-bg-color: #27272a;
+    --fc-button-border-color: #3f3f46;
+    --fc-button-hover-bg-color: #3f3f46;
+    --fc-button-hover-border-color: #52525b;
+    --fc-button-active-bg-color: #2563eb;
+    --fc-button-active-border-color: #1d4ed8;
+    --fc-today-bg-color: rgba(59, 130, 246, 0.15);
+}
+html[data-theme="dark"] #calendarioTracking .fc {
+    color: #e4e4e7;
+}
+html[data-theme="dark"] #calendarioTracking .fc-toolbar-title {
+    color: #f4f4f5;
+}
+html[data-theme="dark"] #calendarioTracking .fc-col-header-cell-cushion,
+html[data-theme="dark"] #calendarioTracking .fc-daygrid-day-number {
+    color: #a1a1aa;
+}
+html[data-theme="dark"] #buscadorCodEnvio {
+    background-color: var(--ix2m-elevated) !important;
+    color: var(--ix2m-text) !important;
+    border-color: var(--ix2m-border) !important;
+}
+
+/* Respuesta lab: barra de paginación (#paginationControls, JS rptaLaboratorio.js) */
+html[data-theme="dark"] #paginationControls {
+    background: var(--ix2m-surface) !important;
+    border-top-color: var(--ix2m-border) !important;
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] #paginationControls .text-gray-600,
+html[data-theme="dark"] #paginationControls .text-gray-500 {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] #paginationControls select,
+html[data-theme="dark"] #paginationControls #rptaLabLimitSelect {
+    background: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] #paginationControls button[type="button"] {
+    background: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] #paginationControls button[type="button"]:hover:not(:disabled):not(.cursor-not-allowed) {
+    background: var(--ix2m-row-alt) !important;
+}
+
+/* Seguimiento: columna índice N° + contenedor tabla */
+html[data-theme="dark"] #tablaResultados thead th.seg-col-indice,
+html[data-theme="dark"] #tablaResultados tbody td.seg-col-indice {
+    color: var(--ix2m-text) !important;
+    background-color: inherit !important;
+}
+html[data-theme="dark"] table.dataTable#tablaResultados tbody td.seg-col-indice.sorting_1,
+html[data-theme="dark"] table.dataTable#tablaResultados tbody tr > td.seg-col-indice {
+    background-color: inherit !important;
+    box-shadow: none !important;
+}
+html[data-theme="dark"] #tablaSeguimientoWrapper.bg-white {
+    background: var(--ix2m-surface) !important;
+    border-color: var(--ix2m-border) !important;
+}
+
+/* Seguimiento: resumen tracking (modal) */
+html[data-theme="dark"] #resumenTracking {
+    background: linear-gradient(90deg, rgba(30, 58, 138, 0.35) 0%, rgba(49, 46, 129, 0.4) 100%) !important;
+    border-bottom-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] #resumenTracking .text-gray-600,
+html[data-theme="dark"] #resumenTracking .text-gray-800 {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] #resumenTracking .text-blue-600 {
+    color: #93c5fd !important;
+}
+html[data-theme="dark"] #resumenTracking .bg-gray-300 {
+    background: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] #resumenTracking .text-amber-600 {
+    color: #fcd34d !important;
+}
+
+/* Seguimiento: modales (paneles, pestañas, tablas internas) */
+html[data-theme="dark"] #modalDetalle .seg-modal-panel,
+html[data-theme="dark"] #modalTracking .seg-modal-panel,
+html[data-theme="dark"] #modalPDF .seg-modal-panel,
+html[data-theme="dark"] #modalHistorial .seg-modal-panel {
+    background: var(--ix2m-modal-panel) !important;
+    color: var(--ix2m-text) !important;
+    border: 1px solid var(--ix2m-modal-border) !important;
+}
+html[data-theme="dark"] #modalDetalle .border-gray-200,
+html[data-theme="dark"] #modalTracking .border-gray-200,
+html[data-theme="dark"] #modalPDF .border-b,
+html[data-theme="dark"] #modalHistorial .border-b,
+html[data-theme="dark"] #modalHistorial .border-t {
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] #modalDetalle .bg-gray-50,
+html[data-theme="dark"] #modalDetalle .bg-gray-100,
+html[data-theme="dark"] #modalHistorial .bg-gray-50,
+html[data-theme="dark"] #modalTracking .dashboard-modal-actions.bg-gray-50,
+html[data-theme="dark"] #modalDetalle .dashboard-modal-actions.bg-gray-50 {
+    background: var(--ix2m-elevated) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] #modalDetalle .tab-btn {
+    color: var(--ix2m-muted) !important;
+    border-bottom-color: transparent !important;
+}
+html[data-theme="dark"] #modalDetalle .tab-btn.tab-active,
+html[data-theme="dark"] #modalDetalle .tab-btn.border-blue-600 {
+    color: #c7d2fe !important;
+    border-bottom-color: #818cf8 !important;
+}
+html[data-theme="dark"] #modalDetalle table thead.bg-gray-100,
+html[data-theme="dark"] #modalDetalle .sticky.top-0.bg-gray-100 {
+    background: var(--ix2m-elevated) !important;
+}
+html[data-theme="dark"] #modalDetalle table thead th {
+    color: var(--ix2m-text) !important;
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] #modalDetalle tbody.divide-y.divide-gray-200 > tr,
+html[data-theme="dark"] #modalDetalle tbody tr {
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] #modalDetalle tbody td,
+html[data-theme="dark"] #modalDetalle .text-gray-500,
+html[data-theme="dark"] #modalDetalle .text-gray-700 {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] #modalTracking .text-gray-800,
+html[data-theme="dark"] #modalPDF .text-gray-700,
+html[data-theme="dark"] #modalHistorial .text-gray-800,
+html[data-theme="dark"] #modalHistorial .text-gray-600,
+html[data-theme="dark"] #modalHistorial .text-gray-500 {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] #modalAdvertenciaEdicion .bg-red-50 {
+    background: rgba(127, 29, 29, 0.35) !important;
+    border-color: rgba(248, 113, 113, 0.35) !important;
+}
+html[data-theme="dark"] #modalAdvertenciaEdicion .text-red-700,
+html[data-theme="dark"] #modalAdvertenciaEdicion .text-red-600,
+html[data-theme="dark"] #modalAdvertenciaEdicion .text-red-500 {
+    color: #fca5a5 !important;
+}
+html[data-theme="dark"] #modalAdvertenciaEdicion .bg-red-100 {
+    background: rgba(127, 29, 29, 0.45) !important;
+}
+html[data-theme="dark"] #modalEditarEnvio .bg-blue-50 {
+    background: rgba(30, 58, 138, 0.35) !important;
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] #modalEditarEnvio .border-blue-200 {
+    border-color: var(--ix2m-border) !important;
+}
+
+/* —— Necropsias: listado, registro, reporte comparativo (body.dash-necropsias-page) —— */
+html[data-theme="dark"] body.dash-necropsias-page {
+    background: var(--ix2m-bg) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page.bg-gray-50,
+html[data-theme="dark"] body.dash-necropsias-page.bg-sky-50,
+html[data-theme="dark"] body.dash-necropsias-page.bg-light {
+    background-color: var(--ix2m-bg) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page .bg-sky-50 {
+    background-color: var(--ix2m-surface) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page .bg-gray-50 {
+    background-color: var(--ix2m-elevated) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page .bg-light {
+    background-color: var(--ix2m-bg) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page .rounded-2xl.shadow-sm.border.border-gray-200.p-4,
+html[data-theme="dark"] body.dash-necropsias-page .rounded-2xl.shadow-sm.border.border-gray-200.p-4.sm\:p-6 {
+    background: var(--ix2m-surface) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page .card-filtros-compacta.bg-white,
+html[data-theme="dark"] body.dash-necropsias-page .card-filtros-compacta,
+html[data-theme="dark"] body.dash-necropsias-page #tablaNecropsiasWrapper.bg-white,
+html[data-theme="dark"] body.dash-necropsias-page .bg-white {
+    background-color: var(--ix2m-surface) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page .border-gray-200,
+html[data-theme="dark"] body.dash-necropsias-page .border-gray-300,
+html[data-theme="dark"] body.dash-necropsias-page .divide-gray-200 {
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page .hover\:bg-gray-100:hover {
+    background-color: var(--ix2m-row-alt) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page .bg-gray-100,
+html[data-theme="dark"] body.dash-necropsias-page .necropsia-cabecera-grid {
+    background-color: var(--ix2m-elevated) !important;
+    color: var(--ix2m-text) !important;
+}
+/* Thead listado (modal edición), registro y tablas de formulario: verde/gris claro → cabecera oscura legible */
+html[data-theme="dark"] body.dash-necropsias-page thead.bg-green-100,
+html[data-theme="dark"] body.dash-necropsias-page thead.bg-green-50 {
+    background-color: var(--ix2m-elevated) !important;
+    background-image: none !important;
+    border-bottom: 1px solid var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page thead.bg-gray-100 {
+    background-color: var(--ix2m-elevated) !important;
+    background-image: none !important;
+    border-bottom: 1px solid var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page thead.bg-green-100 th,
+html[data-theme="dark"] body.dash-necropsias-page thead.bg-green-50 th,
+html[data-theme="dark"] body.dash-necropsias-page thead.bg-gray-100 th {
+    color: var(--ix2m-text) !important;
+    background-color: transparent !important;
+    border-color: var(--ix2m-border) !important;
+}
+/* Vence .text-gray-700 global del bloque necropsias (cabeceras quedaban demasiado apagadas) */
+html[data-theme="dark"] body.dash-necropsias-page thead.text-gray-700,
+html[data-theme="dark"] body.dash-necropsias-page thead.text-gray-700 th {
+    color: var(--ix2m-text) !important;
+}
+/* Tabla principal DataTables listado (#tabla.config-table): refuerzo si el thead no trae clases de color */
+html[data-theme="dark"] body.dash-necropsias-page table.data-table.config-table thead th {
+    background: linear-gradient(180deg, #1e40af 0%, #1e3a8a 100%) !important;
+    color: #f8fafc !important;
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page .text-gray-900,
+html[data-theme="dark"] body.dash-necropsias-page .text-gray-800 {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page .text-gray-700,
+html[data-theme="dark"] body.dash-necropsias-page .text-gray-600,
+html[data-theme="dark"] body.dash-necropsias-page .text-gray-500 {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page .card {
+    background: var(--ix2m-surface) !important;
+    border-color: var(--ix2m-border) !important;
+    box-shadow: none;
+}
+html[data-theme="dark"] body.dash-necropsias-page .btn-outline {
+    background: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page .btn-outline:hover {
+    background: var(--ix2m-row-alt) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page .form-control {
+    background: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page select,
+html[data-theme="dark"] body.dash-necropsias-page textarea,
+html[data-theme="dark"] body.dash-necropsias-page input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]) {
+    background: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page input[type="file"] {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page input[type="file"]::file-selector-button {
+    background: var(--ix2m-row-alt) !important;
+    color: #86efac !important;
+    border: 1px solid var(--ix2m-border) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page .plan-enlace-recadro:not(:empty) {
+    border-color: rgba(34, 197, 94, 0.45) !important;
+    background: rgba(34, 197, 94, 0.12) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page .data-table tbody td,
+html[data-theme="dark"] body.dash-necropsias-page .data-table tbody th {
+    background: var(--ix2m-surface) !important;
+    border-bottom-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page .data-table tbody tr:hover,
+html[data-theme="dark"] body.dash-necropsias-page .data-table tbody tr:hover td {
+    background-color: var(--ix2m-surface) !important;
+    box-shadow: none !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page .table-wrapper::-webkit-scrollbar-track {
+    background: var(--ix2m-surface) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page .table-wrapper::-webkit-scrollbar-thumb {
+    background: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page .checkbox-group {
+    background: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page .checkbox-group label:hover {
+    background-color: var(--ix2m-row-alt) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page #containerGalpones.bg-white {
+    background: var(--ix2m-elevated) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page .necropsia-tabs-nav .border-gray-200 {
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page .border-green-600 {
+    border-color: #4ade80 !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page .text-green-600 {
+    color: #86efac !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page .text-green-700 {
+    color: #bbf7d0 !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page #modalNecropsia .bg-white,
+html[data-theme="dark"] body.dash-necropsias-page #modalNecropsia .rounded-2xl.border,
+html[data-theme="dark"] body.dash-necropsias-page #modalNecropsia .rounded-xl.border {
+    background: var(--ix2m-modal-panel) !important;
+    border-color: var(--ix2m-modal-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page #modalNecropsia .bg-gray-50,
+html[data-theme="dark"] body.dash-necropsias-page #modalNecropsia .necropsia-modal-actions {
+    background: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page #modalNecropsia tr.bg-white td,
+html[data-theme="dark"] body.dash-necropsias-page #modalNecropsia tr.bg-white th,
+html[data-theme="dark"] body.dash-necropsias-page #modalNecropsia table tbody tr > td,
+html[data-theme="dark"] body.dash-necropsias-page #modalNecropsia table tbody tr > th {
+    background: var(--ix2m-surface) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page #modalNecropsia table thead th {
+    background: var(--ix2m-elevated) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page #modalNecropsia #contenidoNecropsia,
+html[data-theme="dark"] body.dash-necropsias-page #modalNecropsia > .sanidad-modal-box-mobile {
+    background: var(--ix2m-modal-panel) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page #modalCarga .bg-sky-50 {
+    background: var(--ix2m-modal-panel) !important;
+    border: 1px solid var(--ix2m-modal-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page #modalImagenLightbox .bg-sky-50 {
+    background: var(--ix2m-modal-panel) !important;
+    border-color: #3b82f6 !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page #modalImagenLightbox .bg-white\/80,
+html[data-theme="dark"] body.dash-necropsias-page #modalImagenLightbox [class*="bg-white"] {
+    background: rgba(39, 39, 42, 0.92) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page .shadow-md,
+html[data-theme="dark"] body.dash-necropsias-page .shadow-sm {
+    box-shadow: 0 1px 0 0 var(--ix2m-border) !important;
+}
+html[data-theme="dark"] body.dash-necropsias-page .shadow-2xl {
+    box-shadow: var(--ix2m-modal-shadow) !important;
+}
+
+/* —— Configuración (body.dash-config-page): paneles, Mis zonas, tablas —— */
+html[data-theme="dark"] body.dash-config-page {
+    background: var(--ix2m-bg) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-config-page .bg-white,
+html[data-theme="dark"] body.dash-config-page .shadow-sm.overflow-hidden {
+    background: var(--ix2m-surface) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-config-page .rounded-xl.border,
+html[data-theme="dark"] body.dash-config-page .rounded-2xl.border,
+html[data-theme="dark"] body.dash-config-page .border.border-gray-200,
+html[data-theme="dark"] body.dash-config-page .border-gray-200,
+html[data-theme="dark"] body.dash-config-page .border-gray-300 {
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] body.dash-config-page .text-gray-500,
+html[data-theme="dark"] body.dash-config-page .text-gray-600,
+html[data-theme="dark"] body.dash-config-page .text-gray-700 {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] body.dash-config-page .text-gray-800,
+html[data-theme="dark"] body.dash-config-page .text-gray-900 {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-config-page .tab-btn.bg-gray-100 {
+    background: var(--ix2m-elevated) !important;
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] body.dash-config-page .config-panel-head {
+    background: var(--ix2m-elevated) !important;
+    border-bottom-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] body.dash-config-page .config-panel-head .font-semibold {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-config-page .config-panel-subtitle {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] body.dash-config-page .badge-cargo--doctor {
+    background: #1e3a5f !important;
+    color: #93c5fd !important;
+}
+html[data-theme="dark"] body.dash-config-page .badge-cargo--adjunto {
+    background: #312e81 !important;
+    color: #c7d2fe !important;
+}
+html[data-theme="dark"] body.dash-config-page .btn-quitar-icon:hover {
+    background: rgba(225, 29, 72, 0.15) !important;
+}
+html[data-theme="dark"] body.dash-config-page .select-config-wrap .select2-container--default .select2-selection--single {
+    background: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-config-page .bg-slate-700 {
+    background: #475569 !important;
+    color: #f8fafc !important;
+}
+html[data-theme="dark"] body.dash-config-page select,
+html[data-theme="dark"] body.dash-config-page input[type="text"],
+html[data-theme="dark"] body.dash-config-page input[type="search"],
+html[data-theme="dark"] body.dash-config-page input[type="email"],
+html[data-theme="dark"] body.dash-config-page input[type="number"],
+html[data-theme="dark"] body.dash-config-page input[type="date"],
+html[data-theme="dark"] body.dash-config-page textarea {
+    background: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-config-page table.config-table tbody td,
+html[data-theme="dark"] body.dash-config-page table.data-table.config-table tbody td {
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] body.dash-config-page .shadow-sm,
+html[data-theme="dark"] body.dash-config-page .shadow-md {
+    box-shadow: 0 1px 0 0 var(--ix2m-border) !important;
+}
+
+/* Estándares SIP v2 (dashboard-estandares2): paneles, árbol, tablas */
+html[data-theme="dark"] body.dash-est2-page,
+html[data-theme="dark"] body.dash-est2-page #est2Layout {
+    background: var(--ix2m-bg) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-est2-page .save-all-section,
+html[data-theme="dark"] body.dash-est2-page .card {
+    background: var(--ix2m-surface) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+    box-shadow: none !important;
+}
+html[data-theme="dark"] body.dash-est2-page .save-all-title {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-est2-page .card-head {
+    background: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-est2-page .panel-resizer {
+    background: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] body.dash-est2-page .panel-resizer:hover,
+html[data-theme="dark"] body.dash-est2-page .panel-resizer.resizing {
+    background: #2563eb !important;
+}
+html[data-theme="dark"] body.dash-est2-page .nodo-tree-label {
+    background: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-est2-page .tree-ramas li::before {
+    border-top-color: var(--ix2m-border-soft) !important;
+}
+html[data-theme="dark"] body.dash-est2-page .tree-ramas li::after {
+    border-left-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] body.dash-est2-page .btn-tree-tool,
+html[data-theme="dark"] body.dash-est2-page .btn-secondary,
+html[data-theme="dark"] body.dash-est2-page .btn-ord {
+    background: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-est2-page .btn-tree-tool.activo {
+    background: rgba(37, 99, 235, 0.35) !important;
+    border-color: #3b82f6 !important;
+    color: #c7d2fe !important;
+}
+html[data-theme="dark"] body.dash-est2-page .btn-del {
+    background: var(--ix2m-surface) !important;
+    border-color: rgba(248, 113, 113, 0.45) !important;
+    color: #fca5a5 !important;
+}
+html[data-theme="dark"] body.dash-est2-page .tabla-est td {
+    border-color: var(--ix2m-border) !important;
+    background: var(--ix2m-surface) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-est2-page .tabla-est th {
+    border-color: var(--ix2m-border) !important;
+    background: var(--ix2m-elevated) !important;
+    color: #c7d2fe !important;
+}
+html[data-theme="dark"] body.dash-est2-page .form-control {
+    background: var(--ix2m-input-bg) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-est2-page .sip-flujo-banner {
+    background: rgba(30, 64, 175, 0.28) !important;
+    border-color: var(--ix2m-border) !important;
+    color: #c7d2fe !important;
+}
+html[data-theme="dark"] body.dash-est2-page .est2-tab {
+    background: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] body.dash-est2-page .est2-tab:hover {
+    background: var(--ix2m-row-alt) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-est2-page .est2-tab.est2-tab-active {
+    background: #1e40af !important;
+    border-color: #3b82f6 !important;
+    color: #fff !important;
+}
+html[data-theme="dark"] body.dash-est2-page .est2-hub-acc {
+    background: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] body.dash-est2-page .est2-hub-acc > summary {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] body.dash-est2-page .est2-hub-acc > summary:hover {
+    background: var(--ix2m-row-alt) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-est2-page .est2-hub-item-row {
+    background: var(--ix2m-surface) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-est2-page .est2-hub-item-row:hover {
+    background: rgba(37, 99, 235, 0.18) !important;
+    border-color: #3b82f6 !important;
+}
+html[data-theme="dark"] body.dash-est2-page .btn-add-discreto {
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] body.dash-est2-page .btn-add-discreto:hover {
+    background: var(--ix2m-row-alt) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-est2-page .in-node-name.resaltado {
+    outline-color: #60a5fa !important;
+    border-color: #60a5fa !important;
+}
+html[data-theme="dark"] body.dash-est2-page .node-leaf-check {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] body.dash-est2-page .tree-toggle {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] body.dash-est2-page .tree-toggle:hover {
+    color: #93c5fd !important;
+}
+
+/* --- Tablas genéricas (sin DataTables): hover neutro --- */
+html[data-theme="dark"] table:not(.dataTable) tbody tr:hover td,
+html[data-theme="dark"] table:not(.dataTable) tbody tr:hover th {
+    background-color: var(--ix2m-row-hover) !important;
+    transition: none !important;
+}
+
+/* --- Comparativos necropsias: barra de pestañas --- */
+html[data-theme="dark"] .tabs-bar {
+    background: var(--ix2m-surface) !important;
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] .tabs-nav .tab-button.active {
+    color: #93c5fd !important;
+    border-bottom-color: #3b82f6 !important;
+}
+html[data-theme="dark"] .tabs-nav .tab-button:not(.active) {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] .tabs-nav .tab-button:not(.active):hover {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .tab-panel {
+    background: var(--ix2m-surface) !important;
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] .tab-panel iframe {
+    background: var(--ix2m-bg) !important;
+}
+
+/* --- Planificación: modales granja / tipo programa (comparativo) + árbol --- */
+html[data-theme="dark"] .tree-granja {
+    background: var(--ix2m-surface) !important;
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] .tree-granja-head {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .tree-granja-meta,
+html[data-theme="dark"] .modal-granja-hint {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] .zona-subzona-granjas label {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .zona-subzona-granjas .meta {
+    color: var(--ix2m-muted) !important;
+}
+
+/* --- Estándares necropsia: modal granjas (tree-zone / checks-grid) --- */
+html[data-theme="dark"] .modal-granjas-tree-scroll {
+    background: var(--ix2m-bg) !important;
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] .tree-zone-head {
+    color: #93c5fd !important;
+}
+html[data-theme="dark"] .tree-subzona-head {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .tree-expand-zona,
+html[data-theme="dark"] .tree-expand-subzona {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] .checks-grid-3 label {
+    background: var(--ix2m-surface) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .checks-grid-3 .meta {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] .galpon-pill-planif:hover {
+    background: var(--ix2m-row-hover) !important;
+}
+
+/* --- Seguimiento muestras: primera columna tabla principal --- */
+html[data-theme="dark"] #tablaResultados thead th.seg-col-indice,
+html[data-theme="dark"] #tablaResultados tbody td:first-child {
+    background: var(--ix2m-elevated) !important;
+    color: var(--ix2m-text) !important;
+    border-color: var(--ix2m-border) !important;
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    box-shadow: 1px 0 0 var(--ix2m-border);
+}
+html[data-theme="dark"] #tablaResultados thead th.seg-col-indice {
+    z-index: 3;
+}
+
+/* --- Registro laboratorio (rpta): tarjetas solicitud en sidebar --- */
+html[data-theme="dark"] .solicitud-card:hover {
+    background-color: rgba(255, 255, 255, 0.06) !important;
+    border-color: var(--ix2m-border-soft) !important;
+}
+
+/* --- Listados: botón “ojito” / Ver --- */
+html[data-theme="dark"] button.btn-detalles:hover,
+html[data-theme="dark"] button.btn-detalles-programa:hover,
+html[data-theme="dark"] button.text-blue-600:hover,
+html[data-theme="dark"] a.text-blue-600:hover {
+    color: #93c5fd !important;
+}
+html[data-theme="dark"] button.btn-detalles-programa:hover {
+    background-color: rgba(59, 130, 246, 0.18) !important;
+}
+
+/* --- Modales con tablas (seguimiento, listados, cronograma): thead gris --- */
+html[data-theme="dark"] .seg-modal-panel thead.bg-gray-100,
+html[data-theme="dark"] .modal-overlay thead.bg-gray-100,
+html[data-theme="dark"] .fixed.inset-0 thead.bg-gray-100 {
+    background: var(--ix2m-elevated) !important;
+}
+html[data-theme="dark"] .seg-modal-panel table tbody tr:hover td,
+html[data-theme="dark"] .modal-overlay .modal-body table tbody tr:hover td,
+html[data-theme="dark"] .fixed.inset-0 .overflow-auto table tbody tr:hover td {
+    background-color: var(--ix2m-row-hover) !important;
+}
+
+/* --- Tracking reporte: pestañas Todos / Pendientes --- */
+html[data-theme="dark"] button#tabTodos.tab-button {
+    background: rgba(37, 99, 235, 0.22) !important;
+    color: #93c5fd !important;
+    border-bottom-color: #3b82f6 !important;
+}
+html[data-theme="dark"] button#tabPendientes.tab-button {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] button#tabPendientes.tab-button:hover {
+    color: var(--ix2m-text) !important;
+    border-bottom-color: var(--ix2m-border-soft) !important;
+}
+html[data-theme="dark"] .dashboard-modal-actions {
+    background: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] .dashboard-modal-actions button.bg-gray-300,
+html[data-theme="dark"] .dashboard-modal-actions .bg-gray-300 {
+    background: var(--ix2m-surface) !important;
+    color: var(--ix2m-text) !important;
+    border: 1px solid var(--ix2m-border) !important;
+}
+html[data-theme="dark"] .dashboard-modal-actions button.bg-gray-300:hover,
+html[data-theme="dark"] .dashboard-modal-actions .bg-gray-300:hover {
+    background: var(--ix2m-row-alt) !important;
+}
+
+/* --- Escaneo QR: detener cámara --- */
+html[data-theme="dark"] button#stopScan {
+    background: var(--ix2m-elevated) !important;
+    color: var(--ix2m-text) !important;
+    border: 1px solid var(--ix2m-border) !important;
+}
+html[data-theme="dark"] button#stopScan:hover {
+    background: var(--ix2m-row-alt) !important;
+    border-color: var(--ix2m-border-soft) !important;
+}
+
+/* --- Historia clínica (dashboard-historia-clinica.php) --- */
+html[data-theme="dark"] .modal-granjas-head,
+html[data-theme="dark"] .modal-granjas-foot {
+    background: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .modal-panel > div.rounded-xl {
+    background: var(--ix2m-modal-panel) !important;
+    border-color: var(--ix2m-modal-border) !important;
+    box-shadow: var(--ix2m-modal-shadow) !important;
+}
+html[data-theme="dark"] .tree-zone {
+    border-color: var(--ix2m-border) !important;
+    background: var(--ix2m-surface) !important;
+}
+html[data-theme="dark"] .tree-zone-head {
+    color: #93c5fd !important;
+}
+/* Modal granjas/campañas: tonos grises (evitar cabeceras de zona azuladas) */
+html[data-theme="dark"] .gmc-granjas-modal .tree-zone-head {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .gmc-granjas-modal .hc-camp-line {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .gmc-granjas-modal .modal-granjas-body {
+    background: var(--ix2m-modal-panel) !important;
+}
+html[data-theme="dark"] .fila-granja {
+    border-color: var(--ix2m-border) !important;
+    background: var(--ix2m-surface) !important;
+}
+html[data-theme="dark"] .hc-camp-lines {
+    background: transparent !important;
+    border: none !important;
+}
+html[data-theme="dark"] .hc-camp-wrap {
+    background: transparent !important;
+    border-color: var(--ix2m-border) !important;
+}
+
+/* HC: modales «Secciones de la historia clínica» (#hc-modal-matriz-layout) y «Procesos visibles» (#hc-modal-procesos) */
+html[data-theme="dark"] #hc-modal-matriz-layout .modal-granjas-head h4,
+html[data-theme="dark"] #hc-modal-procesos .modal-granjas-head h4 {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .hc-tree-outline-panel {
+    --hc-outline-tree-line: #3b82f6;
+    --hc-outline-tree-row-hover: var(--ix2m-row-hover);
+    --hc-outline-label-strong: var(--ix2m-text);
+    --hc-outline-label-node: var(--ix2m-muted);
+    --hc-outline-muted: var(--ix2m-muted);
+    --hc-outline-panel-bg: var(--ix2m-surface);
+    --hc-outline-panel-border: var(--ix2m-border);
+    --hc-outline-arbol-bg: rgba(24, 24, 27, 0.92);
+    --hc-outline-arbol-fg: var(--ix2m-muted);
+    --hc-outline-vis: #5eead4;
+    --hc-outline-vis-hover-bg: rgba(45, 212, 191, 0.15);
+    --hc-outline-vis-hover-fg: #ccfbf1;
+    --hc-outline-toggle: var(--ix2m-muted);
+    --hc-outline-toggle-hover: var(--ix2m-text);
+    --hc-outline-toggle-hover-bg: var(--ix2m-row-hover);
+    --hc-outline-matriz-sel-bg: rgba(59, 130, 246, 0.18);
+    --hc-outline-matriz-sel-outline: #3b82f6;
+}
+html[data-theme="dark"] #hc-modal-matriz-layout .hc-matriz-tree-scroll-panel.hc-tree-outline-panel {
+    background: var(--hc-outline-panel-bg) !important;
+    border-color: var(--hc-outline-panel-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] #hc-modal-matriz-layout #hc-matriz-arbol-host.hc-tree-outline-panel {
+    background: var(--hc-outline-arbol-bg) !important;
+    color: var(--hc-outline-arbol-fg) !important;
+}
+html[data-theme="dark"] #hc-modal-matriz-layout .hc-matriz-tree-row:hover {
+    background: var(--ix2m-row-hover) !important;
+}
+html[data-theme="dark"] #hc-modal-matriz-layout .hc-matriz-tree-row.hc-matriz-sel {
+    background: rgba(59, 130, 246, 0.18) !important;
+    outline: 1px solid #3b82f6 !important;
+}
+html[data-theme="dark"] #hc-modal-matriz-layout .hc-matriz-tree-root-title {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] #hc-modal-matriz-layout .hc-matriz-node-ix {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] #hc-modal-matriz-layout .hc-matriz-in-node {
+    background: var(--ix2m-input-bg) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] #hc-modal-matriz-layout .hc-matriz-in-node::placeholder {
+    color: var(--ix2m-muted) !important;
+    opacity: 0.85;
+}
+html[data-theme="dark"] #hc-modal-matriz-layout label.hc-matriz-lbl-proc {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] #hc-modal-matriz-layout .hc-matriz-tree-toggle {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] #hc-modal-matriz-layout .hc-matriz-tree-toggle:hover {
+    color: var(--ix2m-text) !important;
+    background: var(--ix2m-row-hover) !important;
+}
+html[data-theme="dark"] #hc-modal-matriz-layout .hc-matriz-splitter {
+    background-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] #hc-modal-matriz-layout .hc-matriz-splitter:hover {
+    background-color: #71717a !important;
+}
+html[data-theme="dark"] #hc-modal-matriz-layout #hc-matriz-arbol-host .hc-tree-node-lbl {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] #hc-modal-matriz-layout #hc-matriz-arbol-host .hc-tree-leaf-lbl {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] #hc-modal-matriz-layout .hc-matriz-arbol-dim .hc-tree-leaf-lbl {
+    opacity: 0.38 !important;
+}
+html[data-theme="dark"] #hc-modal-matriz-layout .hc-btn-icon {
+    background: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] #hc-modal-matriz-layout .hc-btn-icon:hover {
+    background: var(--ix2m-row-alt) !important;
+    border-color: var(--ix2m-border-soft) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] #hc-modal-matriz-layout .hc-matriz-btn-add {
+    color: #86efac !important;
+    border-color: #166534 !important;
+    background: rgba(22, 101, 52, 0.35) !important;
+}
+html[data-theme="dark"] #hc-modal-matriz-layout .hc-matriz-btn-add:hover {
+    color: #bbf7d0 !important;
+    border-color: #22c55e !important;
+    background: rgba(22, 101, 52, 0.5) !important;
+}
+html[data-theme="dark"] #hc-modal-matriz-layout .hc-matriz-btn-del {
+    color: #fecaca !important;
+    border-color: #991b1b !important;
+    background: rgba(127, 29, 29, 0.35) !important;
+}
+html[data-theme="dark"] #hc-modal-matriz-layout .hc-matriz-btn-del:hover {
+    color: #fee2e2 !important;
+    border-color: #ef4444 !important;
+    background: rgba(127, 29, 29, 0.5) !important;
+}
+html[data-theme="dark"] #hc-modal-matriz-layout .btn-eg-outline,
+html[data-theme="dark"] #hc-modal-procesos .btn-eg-outline {
+    color: var(--ix2m-text) !important;
+    background: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] #hc-modal-matriz-layout .btn-eg-outline:hover,
+html[data-theme="dark"] #hc-modal-procesos .btn-eg-outline:hover {
+    background: var(--ix2m-row-alt) !important;
+    border-color: var(--ix2m-border-soft) !important;
+}
+html[data-theme="dark"] #hc-modal-matriz-layout .btn-eg-close-x,
+html[data-theme="dark"] #hc-modal-procesos .btn-eg-close-x {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] #hc-modal-matriz-layout .btn-eg-close-x:hover,
+html[data-theme="dark"] #hc-modal-procesos .btn-eg-close-x:hover {
+    color: var(--ix2m-text) !important;
+}
+
+html[data-theme="dark"] #hc-modal-procesos .hc-procesos-list.hc-tree-outline-panel {
+    background: var(--hc-outline-panel-bg) !important;
+    border-color: var(--hc-outline-panel-border) !important;
+}
+
+html[data-theme="dark"] .form-control,
+html[data-theme="dark"] .hc-per-input,
+html[data-theme="dark"] .hc-filtro-control {
+    background: var(--ix2m-input-bg) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .hc-matriz-card {
+    border-color: var(--ix2m-border) !important;
+    background: var(--ix2m-surface) !important;
+}
+html[data-theme="dark"] .hc-matriz-table thead th {
+    background: #1e40af !important;
+    border-color: #1d4ed8 !important;
+}
+html[data-theme="dark"] .hc-matriz-table tbody td {
+    border-bottom-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .hc-matriz-table tbody td.hc-col-param {
+    background: var(--ix2m-surface) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .hc-matriz-table tr.hc-row-param-det td.hc-col-param,
+html[data-theme="dark"] .hc-matriz-table tr.hc-row-param-det td {
+    background: var(--ix2m-row) !important;
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] .hc-tab-btn {
+    background: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .hc-tab-btn.hc-tab-on {
+    background: #1d4ed8 !important;
+    border-color: #3b82f6 !important;
+    color: #fff !important;
+}
+html[data-theme="dark"] .hc-matriz-block-granja {
+    border-bottom-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] .hc-matriz-block-title {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .hc-matriz-block-meta {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] .hc-sub-conos th,
+html[data-theme="dark"] .hc-sub-conos td {
+    border: 1px solid var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+
+/* —— Temperatura: datalogger + transporte pollo BB (body.dash-temperatura-page) —— */
+html[data-theme="dark"] body.dash-temperatura-page {
+    background: var(--ix2m-bg) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page.bg-gray-50 {
+    background: var(--ix2m-bg) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page .card,
+html[data-theme="dark"] body.dash-temperatura-page .bg-white {
+    background: var(--ix2m-surface) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page .border-gray-200,
+html[data-theme="dark"] body.dash-temperatura-page .border-gray-300,
+html[data-theme="dark"] body.dash-temperatura-page .border-gray-100 {
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page .text-gray-900,
+html[data-theme="dark"] body.dash-temperatura-page .text-gray-800 {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page .text-gray-700,
+html[data-theme="dark"] body.dash-temperatura-page .text-gray-600,
+html[data-theme="dark"] body.dash-temperatura-page .text-gray-500 {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page .bg-gray-50,
+html[data-theme="dark"] body.dash-temperatura-page .bg-gray-50\/40 {
+    background: var(--ix2m-elevated) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page .hover\:bg-gray-50:hover {
+    background: var(--ix2m-row-hover) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page .temp-tab-btn {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page .temp-tab-btn.active {
+    color: #60a5fa !important;
+    border-bottom-color: #3b82f6 !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page .temp-dl-filtros-row,
+html[data-theme="dark"] body.dash-temperatura-page .ttpbb-filtros-row {
+    background: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]),
+html[data-theme="dark"] body.dash-temperatura-page select,
+html[data-theme="dark"] body.dash-temperatura-page textarea {
+    background: var(--ix2m-input-bg) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.85);
+}
+html[data-theme="dark"] body.dash-temperatura-page .ttpbb-btn-proceso-mapa,
+html[data-theme="dark"] body.dash-temperatura-page .ttpbb-granja-input-open {
+    background: var(--ix2m-input-bg) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page .ttpbb-btn-proceso-mapa:hover {
+    background: var(--ix2m-row) !important;
+    border-color: #60a5fa !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page .ttpbb-btn-proceso-mapa .ttpbb-proc-resumen--placeholder {
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page .temp-corral-card {
+    background: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page .temp-externo-zone {
+    background: linear-gradient(180deg, #422006 0%, #292524 100%) !important;
+    border-color: #92400e !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page .temp-file-pick {
+    background: var(--ix2m-input-bg) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page .temp-file-pick:hover {
+    background: var(--ix2m-row) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page .tinytag-chart-frame,
+html[data-theme="dark"] body.dash-temperatura-page .tinytag-chart-frame-sm {
+    background: var(--ix2m-surface) !important;
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page .tinytag-legend-chip {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page .temp-dl-rango-fechas-wrap.is-inactive .temp-dl-rango-fecha-inp {
+    background-color: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-muted) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page .temp-dl-rango-fechas-wrap.is-active .temp-dl-rango-fecha-inp {
+    background-color: var(--ix2m-input-bg) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page #overlayImportTemp .temp-import-overlay-inner {
+    background: var(--ix2m-modal-panel) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page #overlayImportTemp .temp-import-overlay-title {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page .temp-graf-modal-panel {
+    background: var(--ix2m-modal-panel) !important;
+    border-color: var(--ix2m-modal-border) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page .temp-graf-modal-head h3 {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page #ttpbb-modal-charts > div,
+html[data-theme="dark"] body.dash-temperatura-page #ttpbb-modal-charts-consulta > div {
+    background: var(--ix2m-modal-panel) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page #ttpbb-dlg-galpon .ttpbb-galpon-panel {
+    background: var(--ix2m-modal-panel) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page #ttpbb-galpon-checks {
+    background: var(--ix2m-surface) !important;
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page #temp-dl-modal-granjas .modal-granjas-head,
+html[data-theme="dark"] body.dash-temperatura-page #ttpbb-modal-granjas .modal-granjas-head {
+    background: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page #temp-dl-modal-granjas .modal-granjas-body,
+html[data-theme="dark"] body.dash-temperatura-page #ttpbb-modal-granjas .modal-granjas-body {
+    background: var(--ix2m-surface) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page #temp-dl-modal-granjas .modal-granjas-foot,
+html[data-theme="dark"] body.dash-temperatura-page #ttpbb-modal-granjas .modal-granjas-foot {
+    background: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page #temp-dl-lista .fila-granja,
+html[data-theme="dark"] body.dash-temperatura-page #ttpbb-lista .fila-granja {
+    background: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page #temp-dl-lista .hc-fila-granja-nombre,
+html[data-theme="dark"] body.dash-temperatura-page #ttpbb-lista .hc-fila-granja-nombre {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page .modal-mapa-necro-inner {
+    background: var(--ix2m-modal-panel) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page #temp-dlMapaProcesoDescWrap,
+html[data-theme="dark"] body.dash-temperatura-page #ttpbbMapaProcesoDescWrap {
+    background: var(--ix2m-surface) !important;
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page .ncr-btn-nodo-tree {
+    background: var(--ix2m-elevated) !important;
+    color: var(--ix2m-text) !important;
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page .ncr-btn-nodo-tree:hover {
+    background: var(--ix2m-row) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page .ncr-btn-nodo-tree.activo,
+html[data-theme="dark"] body.dash-temperatura-page .ncr-nodo-hoja-ref.activo {
+    background: rgba(59, 130, 246, 0.22) !important;
+    border-color: #3b82f6 !important;
+    color: #dbeafe !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page .ncr-nodo-tree-label {
+    background: var(--ix2m-surface) !important;
+    color: var(--ix2m-muted) !important;
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page .dataTables_wrapper,
+html[data-theme="dark"] body.dash-temperatura-page table.dataTable {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page table.dataTable thead th {
+    background: var(--ix2m-elevated) !important;
+    color: var(--ix2m-text) !important;
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page table.dataTable tbody td {
+    background: var(--ix2m-surface) !important;
+    color: var(--ix2m-text) !important;
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page table.dataTable tbody tr:hover td {
+    background: var(--ix2m-row-hover) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page .dataTables_wrapper .dataTables_filter input,
+html[data-theme="dark"] body.dash-temperatura-page .dataTables_wrapper .dataTables_length select {
+    background: var(--ix2m-input-bg) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page .ttpbb-proceso-origen-top {
+    background: var(--ix2m-surface) !important;
+    border-color: var(--ix2m-border) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page #ttpbb-lista .btn-eg-outline {
+    background: var(--ix2m-input-bg) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page .text-amber-700,
+html[data-theme="dark"] body.dash-temperatura-page .text-amber-900 {
+    color: #fcd34d !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page .bg-amber-50 {
+    background: rgba(120, 53, 15, 0.35) !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page .border-amber-300 {
+    border-color: #92400e !important;
+}
+html[data-theme="dark"] body.dash-temperatura-page .bg-blue-50\/80 {
+    background: rgba(30, 58, 138, 0.25) !important;
+}
+
+/* ========== Módulo Mortalidad (produccionaves) ========== */
+
+/* Tarjetas KPI / resumen: fondo oscuro en vez de blanco */
+html[data-theme="dark"] .resumen-card {
+    background: var(--ix2m-surface) !important;
+    border: 1px solid var(--ix2m-border) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35) !important;
+}
+html[data-theme="dark"] .resumen-card .valor {
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .resumen-card .etiqueta {
+    color: var(--ix2m-muted) !important;
+}
+
+/* Paneles internos de detalles / edición dentro de los modales */
+html[data-theme="dark"] .mort-detalle-pos {
+    background: var(--ix2m-elevated) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .mort-sexo-card {
+    background: var(--ix2m-row) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .mort-sexo-card.mort-sexo-vacio {
+    background: var(--ix2m-surface) !important;
+    border-style: dashed !important;
+}
+html[data-theme="dark"] .mort-sexo-card-head {
+    border-bottom-color: var(--ix2m-border) !important;
+}
+
+/* Modales Tailwind (dashboards de mortalidad): panel oscuro + borde claro sutil */
+html[data-theme="dark"] .fixed.inset-0 .bg-white.rounded-2xl,
+html[data-theme="dark"] .fixed.inset-0 .bg-white.rounded-3xl,
+html[data-theme="dark"] .fixed.inset-0 .max-w-xl.bg-white,
+html[data-theme="dark"] .fixed.inset-0 .max-w-2xl.bg-white,
+html[data-theme="dark"] .fixed.inset-0 .max-w-3xl.bg-white,
+html[data-theme="dark"] .fixed.inset-0 .max-w-4xl.bg-white,
+html[data-theme="dark"] .fixed.inset-0 .max-w-5xl.bg-white {
+    background-color: var(--ix2m-modal-panel) !important;
+    border: 1px solid var(--ix2m-modal-border) !important;
+    box-shadow: var(--ix2m-modal-shadow) !important;
+    color: var(--ix2m-text) !important;
+}
+
+/* Iconos de ordenamiento de DataTables: acordes a la cabecera neutra */
+html[data-theme="dark"] table.dataTable thead .sorting:before,
+html[data-theme="dark"] table.dataTable thead .sorting_asc:before,
+html[data-theme="dark"] table.dataTable thead .sorting_desc:before,
+html[data-theme="dark"] table.dataTable thead .sorting:after,
+html[data-theme="dark"] table.dataTable thead .sorting_asc:after,
+html[data-theme="dark"] table.dataTable thead .sorting_desc:after {
+    color: var(--ix2m-muted) !important;
+}
+
+/* Botones “Limpiar” y controles con bordes claros dentro de los dashboards */
+html[data-theme="dark"] .btn-grupos-filtro {
+    background: var(--ix2m-surface) !important;
+    border-color: var(--ix2m-border) !important;
+    color: var(--ix2m-text) !important;
+}
+html[data-theme="dark"] .btn-grupos-filtro:hover {
+    background: var(--ix2m-elevated) !important;
+    border-color: #22d3ee !important;
+}
+

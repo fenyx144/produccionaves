@@ -1,0 +1,317 @@
+/* Responsive: formularios, listados y secciones (registro, listado, etc.) */
+/* Evita desbordes y mejora lectura en pantallas pequeñas */
+
+@import url("ix2-module-dark.css");
+
+/* Contenedores principales */
+.dashboard-content,
+.card-body,
+.form-section,
+.view-lista-wrap,
+.view-tarjetas-wrap,
+.table-wrapper {
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+/* Tablas */
+.table-responsive,
+.table-wrapper,
+.dataTables_wrapper {
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+}
+
+.dataTables_wrapper .dataTables_scrollBody {
+    max-width: 100%;
+    max-height: none !important;
+    height: auto !important;
+    overflow-y: visible !important;
+}
+
+/* Formularios: grids y filas que se adapten */
+@media (max-width: 768px) {
+    .row.g-3,
+    .row.g-4 {
+        flex-direction: column;
+    }
+    .row.g-3 .col,
+    .row.g-4 .col,
+    .row .col-md-2,
+    .row .col-md-3,
+    .row .col-md-4,
+    .row .col-md-6 {
+        max-width: 100%;
+        flex: 0 0 100%;
+    }
+    /* Filtros en columna en móvil */
+    .card-body .row {
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* Contenedor de tarjetas/vista iconos ya tiene reglas en dashboard-vista-tabla-iconos.css */
+.cards-grid {
+    max-width: 100%;
+    min-width: 0;
+}
+
+/* Headers y botones en fila que envuelvan */
+@media (max-width: 640px) {
+    .flex.flex-wrap,
+    .d-flex.flex-wrap {
+        gap: 0.5rem;
+    }
+    .view-toggle-group {
+        flex-wrap: wrap;
+    }
+}
+
+/* ========== Necropsias listado: filtros y tabla responsivos ========== */
+@media (max-width: 767px) {
+    body.dash-necropsias-page .card-filtros-compacta .filter-row-periodo > div[style*="min-width"] {
+        min-width: 0 !important;
+        width: 100% !important;
+    }
+    body.dash-necropsias-page .card-filtros-compacta .filter-row-periodo #periodoPorFecha,
+    body.dash-necropsias-page .card-filtros-compacta .filter-row-periodo #periodoPorMes {
+        min-width: 0 !important;
+        width: 100% !important;
+    }
+    body.dash-necropsias-page .tabla-listado-wrapper .reportes-toolbar-row > [id$="DtControls"] .dataTables_length label,
+    body.dash-necropsias-page .tabla-listado-wrapper .reportes-toolbar-row > [id$="DtControls"] .dataTables_filter label {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.35rem;
+        width: 100%;
+    }
+}
+
+/* Contenedor registro: sin márgenes grandes en móvil */
+#contenidoNecropsia,
+.necropsia-form-wrap {
+    max-width: 100%;
+    min-width: 0;
+}
+
+/* Cabecera datos del lote: una columna en móvil */
+@media (max-width: 639px) {
+    .necropsia-cabecera-grid {
+        grid-template-columns: 1fr !important;
+    }
+    .necropsia-cabecera-grid .necropsia-granja-cell {
+        grid-column: span 1 !important;
+    }
+}
+
+/* Tabs necropsias: scroll horizontal en móvil para no cortar */
+.necropsia-tabs-nav {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+}
+.necropsia-tabs-nav nav {
+    flex-wrap: nowrap;
+    min-width: min-content;
+    padding-bottom: 2px;
+}
+@media (max-width: 768px) {
+    .necropsia-tabs-nav nav .tab-button {
+        white-space: nowrap;
+        flex-shrink: 0;
+        font-size: 0.8125rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+}
+
+/* Tab content: tablas con scroll horizontal */
+#contenidoNecropsia .tab-content,
+#modalNecropsia #contenidoNecropsia .tab-content {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+    min-width: 0;
+}
+#contenidoNecropsia .tab-content > table,
+#modalNecropsia #contenidoNecropsia .tab-content > table,
+#contenidoNecropsia .tab-content .overflow-x-auto table,
+#modalNecropsia #contenidoNecropsia .tab-content .overflow-x-auto table {
+    min-width: 800px;
+}
+
+/* Modal edición: pantalla completa en móvil */
+@media (max-width: 640px) {
+    #modalNecropsia {
+        align-items: stretch;
+        padding: 0;
+    }
+    #modalNecropsia > div {
+        max-width: 100%;
+        border-radius: 0;
+        max-height: 100vh;
+    }
+    #modalNecropsia .px-6 {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    #modalNecropsia #contenidoNecropsia {
+        padding: 1rem;
+    }
+    #modalNecropsia .necropsia-modal-actions {
+        gap: 0.5rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        overflow: visible;
+    }
+    #modalNecropsia .necropsia-modal-actions button {
+        flex: 1 1 auto;
+        min-width: min-content;
+        min-width: -webkit-min-content;
+    }
+}
+
+/* Botones Guardar/Actualizar Necropsia: texto completo en pantallas pequeñas (no truncar) */
+#btnGuardarNecropsia {
+    white-space: nowrap;
+}
+@media (max-width: 640px) {
+    #btnGuardarNecropsia {
+        min-width: min-content;
+    }
+}
+
+/* ========== Botones de acción responsivos (Guardar, Cancelar, Limpiar, Exportar, Nueva...) ========== */
+/* Barras de acciones en página (Filtrar, Limpiar, Exportar, Generar reporte, Nueva...) */
+.dashboard-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1rem;
+    justify-content: flex-end;
+    align-items: center;
+    overflow: visible;
+}
+.dashboard-actions > button,
+.dashboard-actions > a.btn {
+    flex: 0 1 auto;
+    min-width: min-content;
+    white-space: nowrap;
+}
+
+/* Footers de modales (Cancelar, Guardar, etc.): que envuelvan y no se corten */
+.dashboard-modal-actions,
+.modal-footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
+    justify-content: flex-end;
+    align-items: center;
+    overflow: visible;
+}
+.dashboard-modal-actions > button,
+.dashboard-modal-actions > .btn,
+.modal-footer > button,
+.modal-footer > .btn {
+    flex: 0 1 auto;
+    min-width: min-content;
+    white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+    .dashboard-actions {
+        gap: 0.5rem;
+        justify-content: stretch;
+    }
+    .dashboard-actions > button,
+    .dashboard-actions > a.btn {
+        flex: 1 1 auto;
+        min-width: 0;
+        max-width: 100%;
+        text-align: center;
+        justify-content: center;
+    }
+    .dashboard-modal-actions,
+    .modal-footer {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+        gap: 0.5rem;
+        justify-content: stretch;
+    }
+    .dashboard-modal-actions > button,
+    .dashboard-modal-actions > .btn,
+    .modal-footer > button,
+    .modal-footer > .btn {
+        flex: 1 1 100%;
+        min-width: 0;
+        max-width: 100%;
+        text-align: center;
+        justify-content: center;
+    }
+    /* Botones en general en pantallas pequeñas: texto centrado (listados, formularios, modales) */
+    button,
+    .btn {
+        text-align: center;
+    }
+    button[class*="inline-flex"],
+    button.d-flex,
+    .btn.d-flex,
+    .btn[class*="inline-flex"],
+    button.flex,
+    .btn.flex {
+        justify-content: center;
+    }
+}
+
+/* ========== Modales móviles: evitar doble scroll (iframe + modal) ========== */
+@media (max-width: 768px) {
+    .modal-overlay,
+    .fixed.inset-0.overflow-y-auto,
+    .sanidad-modal-mobile {
+        min-height: 100vh;
+        min-height: 100dvh;
+        padding-top: max(0.5rem, env(safe-area-inset-top));
+        padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .modal-overlay:not(.hidden),
+    .fixed.inset-0.overflow-y-auto:not(.hidden),
+    .sanidad-modal-mobile:not(.hidden) {
+        align-items: stretch !important;
+    }
+
+    .modal-overlay:not(.hidden) > .modal-box,
+    .fixed.inset-0.overflow-y-auto:not(.hidden) > div:first-child,
+    .sanidad-modal-mobile:not(.hidden) > .sanidad-modal-box-mobile {
+        width: 100%;
+        max-width: 100%;
+        max-height: calc(100vh - 1.25rem - env(safe-area-inset-bottom));
+        max-height: calc(100dvh - 1.25rem - env(safe-area-inset-bottom));
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .modal-overlay .modal-body,
+    .sanidad-modal-mobile .sanidad-modal-scroll,
+    #modalNecropsia #contenidoNecropsia {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    }
+
+    .modal-overlay .modal-header,
+    .modal-overlay .modal-footer {
+        flex-shrink: 0;
+    }
+}

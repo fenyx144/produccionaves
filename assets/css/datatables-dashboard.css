@@ -1,0 +1,268 @@
+/* ============================================
+   ESTILOS COMPARTIDOS PARA TABLAS CON DATATABLES
+   Compatible con: Cliente Procesado, Trozado Diario, etc.
+   ============================================ */
+
+/* === ESTRUCTURA DE TABLA === */
+.dataTable_wrapper,
+#tablaClientes_wrapper,
+#dataTable_wrapper {
+    padding: 0;
+}
+
+table.dataTable,
+#tablaClientes,
+#dataTable {
+    table-layout: auto !important;
+    width: 100% !important;
+}
+
+/* === ENCABEZADO DE TABLA (Gradiente azul uniforme) === */
+.dataTable thead,
+#tablaClientes thead,
+#dataTable thead {
+    background: linear-gradient(to right, rgb(37, 99, 235), rgb(29, 78, 216)) !important;
+    color: white !important;
+}
+
+.dataTable thead th,
+#tablaClientes thead th,
+#dataTable thead th {
+    padding: 12px 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    text-align: left;
+    white-space: nowrap;
+    background-color: transparent !important;
+}
+
+/* === SOLUCIÓN UNIVERSAL PARA FONDOS UNIFORMES === */
+/* Remover TODOS los fondos automáticos de DataTables */
+table.dataTable tbody td.sorting_1,
+table.dataTable tbody td.sorting_2,
+table.dataTable tbody td.sorting_3,
+table.dataTable tbody tr.selected td.sorting_1,
+table.dataTable tbody tr.selected td.sorting_2,
+table.dataTable tbody tr.selected td.sorting_3 {
+    background-color: transparent !important;
+}
+
+/* Remover clases de ordenamiento */
+.sorting_1, .sorting_2, .sorting_3,
+.sorting_asc, .sorting_desc {
+    background-color: inherit !important;
+}
+
+/* === FILAS Y CELDAS === */
+.dataTable tbody tr,
+#tablaClientes tbody tr,
+#dataTable tbody tr {
+    background-color: white !important;
+}
+
+.dataTable tbody td,
+#tablaClientes tbody td,
+#dataTable tbody td {
+    padding: 8px;
+    font-size: 0.875rem;
+    border-bottom: 1px solid #e5e7eb;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    background-color: transparent !important;
+}
+
+/* Zebra striping manual */
+.dataTable tbody tr:nth-child(even),
+#tablaClientes tbody tr:nth-child(even),
+#dataTable tbody tr:nth-child(even) {
+    background-color: #f9fafb !important;
+}
+
+/* Hover uniforme */
+.dataTable tbody tr:hover,
+.dataTable tbody tr:hover td,
+#tablaClientes tbody tr:hover,
+#tablaClientes tbody tr:hover td,
+#dataTable tbody tr:hover,
+#dataTable tbody tr:hover td {
+    background-color: #f3f4f6 !important;
+}
+
+/* === COLUMNAS CENTRADAS (IDs, códigos, números) === */
+.text-center-column {
+    text-align: center !important;
+}
+
+/* === COLUMNAS CON WRAP (textos largos) === */
+.text-wrap-column {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    max-width: 200px !important;
+}
+
+/* === DATATABLES CONTROLES === */
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter,
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_paginate {
+    margin: 1rem 0;
+}
+
+.dataTables_wrapper .dataTables_filter {
+    float: right !important;
+    text-align: right !important;
+    margin-bottom: 1rem;
+}
+
+.dataTables_wrapper .dataTables_length {
+    float: left !important;
+    margin-bottom: 1rem;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+    margin-left: 0.5rem !important;
+    padding: 0.375rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+    width: 200px;
+}
+
+.dataTables_wrapper .dataTables_filter input:focus {
+    outline: none;
+    border-color: #a855f7;
+    box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.1);
+    width: 250px;
+}
+
+.dataTables_wrapper .dataTables_length select {
+    padding: 0.375rem 2rem 0.375rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    background-color: white;
+    cursor: pointer;
+    margin: 0 0.5rem;
+}
+
+.dataTables_wrapper .dataTables_length select:focus {
+    outline: none;
+    border-color: #a855f7;
+    box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.1);
+}
+
+/* === PAGINACIÓN === */
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    padding: 0.25rem 0.75rem;
+    margin: 0 0.125rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: white !important;
+    border: none !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    background: #f3f4f6 !important;
+    color: #111827 !important;
+    border: 1px solid #d1d5db !important;
+}
+
+/* === DROPDOWN DE COLUMNAS === */
+.dropdown-columns {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    background-color: white;
+    min-width: 300px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    z-index: 1000;
+    max-height: 500px;
+    overflow-y: auto;
+    margin-top: 8px;
+}
+
+.dropdown-content.show {
+    display: block;
+}
+
+.column-toggle {
+    padding: 10px 16px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+}
+
+.column-toggle:hover {
+    background-color: #f3f4f6;
+}
+
+.column-toggle input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.dropdown-header {
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-weight: 600;
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 768px) {
+    .dataTables_wrapper .dataTables_filter,
+    .dataTables_wrapper .dataTables_length {
+        float: none !important;
+        text-align: center !important;
+        margin-bottom: 1rem;
+    }
+
+    .dataTables_wrapper .dataTables_filter input {
+        width: 100%;
+        max-width: 300px;
+    }
+
+    .dataTable thead th,
+    .dataTable tbody td,
+    #tablaClientes thead th,
+    #tablaClientes tbody td,
+    #dataTable thead th,
+    #dataTable tbody td {
+        font-size: 0.7rem;
+        padding: 6px 4px;
+    }
+}
+
+/* === UTILIDADES === */
+.dataTables_wrapper::after {
+    content: "";
+    display: table;
+    clear: both;
+}
+
+.dataTables_scrollBody {
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+    max-height: 600px !important;
+}

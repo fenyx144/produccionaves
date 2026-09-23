@@ -1,0 +1,10 @@
+{
+    "name": "grs/produccionaves_web",
+    "description": "Sistema Producción Aves - Módulo Mortalidad",
+    "type": "project",
+    "require": {
+        "php": ">=7.4",
+        "mpdf/mpdf": "^8.0",
+        "mpdf/qrcode": "^1.2"
+    }
+}

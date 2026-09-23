@@ -1,0 +1,98 @@
+/**
+ * Cromado compartido de modales SIP (backdrop, panel, cabecera/pie tipo granjas, etc.).
+ * Tema: variables según html[data-theme] — mismo flujo que includes/ix2_head_theme_snippet.js (cookie ix2-theme / switch sidebar).
+ */
+:root {
+    --sip-modal-backdrop: rgba(0, 0, 0, 0.45);
+    --sip-modal-border-accent: #93c5fd;
+    --sip-modal-foot-bg: #fafafa;
+    --sip-modal-head-foot-text: #111827;
+}
+html[data-theme="light"] {
+    --sip-modal-backdrop: rgba(0, 0, 0, 0.45);
+    --sip-modal-border-accent: #93c5fd;
+    --sip-modal-foot-bg: #fafafa;
+    --sip-modal-head-foot-text: #111827;
+}
+html[data-theme="dark"] {
+    --sip-modal-backdrop: rgba(0, 0, 0, 0.82);
+    --sip-modal-border-accent: #3f3f46;
+    --sip-modal-foot-bg: #27272a;
+    --sip-modal-head-foot-text: #f4f4f5;
+}
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: var(--sip-modal-backdrop);
+    z-index: 58;
+}
+.modal-backdrop:not(.lay-hidden) {
+    display: block;
+}
+.modal-panel {
+    position: fixed;
+    inset: 0;
+    z-index: 59;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    pointer-events: none;
+}
+.modal-panel:not(.lay-hidden) {
+    display: flex;
+}
+.modal-panel > * {
+    pointer-events: auto;
+}
+.modal-granjas-head {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--sip-modal-border-accent);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    color: var(--sip-modal-head-foot-text);
+}
+.modal-granjas-foot {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--sip-modal-border-accent);
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    flex-shrink: 0;
+    background: var(--sip-modal-foot-bg);
+    color: var(--sip-modal-head-foot-text);
+}
+.modal-granjas-body {
+    padding: 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+.modal-granjas-tree-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    padding-right: 2px;
+}
+.gmc-granjas-modal-intro {
+    margin-bottom: 0.5rem;
+}
+
+/* Convención .modal-overlay / .modal-box (planificación, listados, etc.): borde acento en claro */
+html[data-theme="light"] .modal-box {
+    border-color: var(--sip-modal-border-accent) !important;
+}
+html[data-theme="light"] .modal-overlay .modal-header,
+html[data-theme="light"] .modal-header {
+    border-bottom-color: var(--sip-modal-border-accent) !important;
+}
+html[data-theme="light"] .modal-head,
+html[data-theme="light"] .modal-foot {
+    border-color: var(--sip-modal-border-accent) !important;
+}

@@ -1,0 +1,80 @@
+/**
+ * Módulos en iframe SIP: ancho completo del panel, márgenes mínimos.
+ */
+html.ix2-embed,
+html.ix2-embed body {
+    background: transparent !important;
+    min-height: 100%;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+html.ix2-embed body.bg-gray-50,
+html.ix2-embed body.sip-dash-body,
+html.ix2-embed body.dash-config-page,
+html.ix2-embed body.eg-estandares-granja {
+    background: transparent !important;
+}
+
+html.ix2-embed body.min-h-screen.p-4,
+html.ix2-embed body.min-h-screen.sm\:p-6,
+html.ix2-embed body.sip-dash-body,
+html.ix2-embed body.sip-dash-layout-stacked {
+    padding: 0.25rem 0.35rem !important;
+    padding-left: max(0.25rem, env(safe-area-inset-left, 0px)) !important;
+    padding-right: max(0.25rem, env(safe-area-inset-right, 0px)) !important;
+    padding-bottom: max(0.25rem, env(safe-area-inset-bottom, 0px)) !important;
+}
+
+@media (min-width: 640px) {
+    html.ix2-embed body.min-h-screen.p-4,
+    html.ix2-embed body.min-h-screen.sm\:p-6,
+    html.ix2-embed body.sip-dash-body {
+        padding: 0.35rem 0.5rem !important;
+        padding-left: max(0.35rem, env(safe-area-inset-left, 0px)) !important;
+        padding-right: max(0.35rem, env(safe-area-inset-right, 0px)) !important;
+    }
+}
+
+html.ix2-embed .form-container,
+html.ix2-embed .form-container.max-w-7xl,
+html.ix2-embed .max-w-7xl,
+html.ix2-embed .container-fluid,
+html.ix2-embed .container-fluid.px-4.py-6 {
+    background: transparent !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 0.25rem 0.35rem !important;
+    max-width: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+    box-sizing: border-box;
+}
+
+html.ix2-embed .dash-wrap,
+html.ix2-embed .dash-wrap.sip-dash-main-grow,
+html.ix2-embed .sip-dash-wrap {
+    max-width: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box;
+}
+
+html.ix2-embed .content-view,
+html.ix2-embed #viewRegistro,
+html.ix2-embed .sip-dash-main-grow {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+}
+
+html.ix2-embed .mx-auto.max-w-7xl,
+html.ix2-embed .max-w-6xl,
+html.ix2-embed .max-w-5xl,
+html.ix2-embed .max-w-4xl {
+    max-width: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
