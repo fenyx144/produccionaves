@@ -159,11 +159,11 @@ function mort_despacho_sql_venta_dia_galpon(mysqli $conn, array $filtros): strin
 }
 
 /**
- * Mortalidad de despacho válida (con regla de venta por sexo).
+ * SQL agregado: cantidades por código de causa (mortalidad despacho válida).
  *
- * @return list<array<string, mixed>>
+ * @return list<array{cod_mort: string, cantidad: int}>
  */
-function mort_despacho_filas_mortalidad_valida(mysqli $conn, array $filtros): array
+function mort_despacho_causas_agregadas_sql(mysqli $conn, array $filtros): array
 {
     $where = mort_despacho_where_base_movimientos($conn, $filtros, 'mz');
     $sqlDesp = mort_despacho_sql_es_despacho('mz');
@@ -171,14 +171,8 @@ function mort_despacho_filas_mortalidad_valida(mysqli $conn, array $filtros): ar
 
     $sql = "
     SELECT
-        DATE(mz.tfectra) AS fecha,
-        TRIM(mz.tcencos) AS cencos,
-        LEFT(TRIM(mz.tcencos), 3) AS granja,
-        RIGHT(TRIM(mz.tcencos), 3) AS campania,
-        TRIM(CAST(mz.tcodint AS CHAR)) AS galpon,
-        TRIM(mz.tcodigo) AS tcodigo,
         LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0') AS cod_mort,
-        mz.tcantid AS cantidad
+        COALESCE(SUM(mz.tcantid), 0) AS cantidad
     FROM movi_zonas mz
     INNER JOIN ({$subVenta}) v
         ON v.fecha = DATE(mz.tfectra)
@@ -192,6 +186,7 @@ function mort_despacho_filas_mortalidad_valida(mysqli $conn, array $filtros): ar
             (TRIM(mz.tcodigo) = 'P0001001' AND v.venta_m > 0)
          OR (TRIM(mz.tcodigo) = 'P0001002' AND v.venta_h > 0)
       )
+    GROUP BY LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0')
     ";
 
     $res = mysqli_query($conn, $sql);
@@ -201,7 +196,10 @@ function mort_despacho_filas_mortalidad_valida(mysqli $conn, array $filtros): ar
 
     $rows = [];
     while ($row = mysqli_fetch_assoc($res)) {
-        $rows[] = $row;
+        $rows[] = [
+            'cod_mort' => (string) ($row['cod_mort'] ?? ''),
+            'cantidad' => (int) ($row['cantidad'] ?? 0),
+        ];
     }
 
     return $rows;
@@ -223,17 +221,17 @@ function mort_despacho_slot_por_codigo(string $cod): ?string
 }
 
 /**
- * @param list<array<string, mixed>> $filas
+ * @param list<array{cod_mort: string, cantidad: int}> $porCodigo
  * @return array{filas: list<array<string, mixed>>, total: int}
  */
-function mort_despacho_agregar_causas(array $filas): array
+function mort_despacho_agregar_causas(array $porCodigo): array
 {
     $counts = [];
     foreach (mort_despacho_causas_slots() as $slot) {
         $counts[$slot['key']] = 0;
     }
     $total = 0;
-    foreach ($filas as $f) {
+    foreach ($porCodigo as $f) {
         $cant = (int) ($f['cantidad'] ?? 0);
         $total += $cant;
         $key = mort_despacho_slot_por_codigo((string) ($f['cod_mort'] ?? ''));
@@ -476,8 +474,7 @@ function mort_despacho_nombres_granja(mysqli $conn): array
  */
 function mort_despacho_analisis_completo(mysqli $conn, array $filtros): array
 {
-    $filasMort = mort_despacho_filas_mortalidad_valida($conn, $filtros);
-    $causas = mort_despacho_agregar_causas($filasMort);
+    $causas = mort_despacho_agregar_causas(mort_despacho_causas_agregadas_sql($conn, $filtros));
     $etapas = mort_despacho_consultar_etapas($conn, $filtros);
     $resumen = mort_despacho_consultar_resumen_granjas($conn, $filtros);
 

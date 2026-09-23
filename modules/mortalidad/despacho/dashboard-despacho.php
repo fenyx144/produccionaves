@@ -53,36 +53,35 @@ $anio = date('Y');
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         body { background: #f8f9fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-        .mdp-panel {
-            background: #fff;
-            border: 1px solid #e5e7eb;
-            border-radius: 1rem;
-            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
-            padding: 1.25rem 1.5rem;
-            margin-bottom: 1.25rem;
+        .btn-primary {
+            background: linear-gradient(135deg, #42a5f5 0%, #1e88e5 100%);
+            border: none; padding: 0.625rem 1.5rem; font-size: 0.875rem; font-weight: 600;
+            color: white; border-radius: 0.75rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem;
         }
-        .mdp-panel h4 {
-            font-size: 0.95rem;
+        .btn-primary:hover { filter: brightness(1.05); }
+        .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; filter: none; }
+        .btn-outline {
+            background: white; border: 1px solid #d1d5db; color: #374151;
+            padding: 0.625rem 1.5rem; font-size: 0.875rem; font-weight: 600;
+            border-radius: 0.75rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem;
+        }
+        .btn-outline:hover { background: #f9fafb; }
+        .mdp-panel-title {
+            font-size: 0.9rem;
             font-weight: 700;
-            color: #0f172a;
-            margin: 0 0 0.75rem;
+            color: #1e3a5f;
+            margin: 0 0 0.85rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #e2e8f0;
         }
-        .mdp-tabla {
-            border-collapse: collapse;
-            font-size: 0.875rem;
-        }
-        .mdp-tabla th, .mdp-tabla td {
-            border: 1px solid #e5e7eb;
-            padding: 0.45rem 0.75rem;
-        }
-        .mdp-tabla th {
-            background: #f1f5f9;
-            font-weight: 600;
-            text-align: left;
-        }
-        .mdp-fila-total td {
-            font-weight: 700;
-            background: #fffbeb;
+        .mdp-panel-title span { font-weight: 500; color: #64748b; font-size: 0.8rem; }
+        .mdp-tabla-wrap .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .mdp-tabla-wrap table.config-table { width: 100%; min-width: 280px; }
+        .mdp-tabla-wrap .col-num { width: 3rem; text-align: center; }
+        .mdp-tabla-wrap .col-pct, .mdp-tabla-wrap .col-qty { text-align: right; white-space: nowrap; }
+        .mdp-fila-total td { font-weight: 700; background: #eff6ff !important; color: #1e3a5f; }
+        .mdp-empty {
+            text-align: center; color: #94a3b8; padding: 2rem 1rem; font-size: 0.875rem;
         }
         .selector-display input { cursor: pointer; background: #fff; }
     </style>
@@ -91,18 +90,25 @@ $anio = date('Y');
 <div class="w-full max-w-full py-4 px-4 sm:px-6 lg:px-8 box-border">
 
     <div class="card-filtros-compacta mb-6 bg-white border rounded-2xl shadow-sm overflow-hidden">
-        <div class="px-6 py-4 bg-gray-50 border-b">
-            <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                <i class="fas fa-truck-loading text-sky-600"></i>
-                Análisis de mortalidad en despacho
-            </h2>
-            <p class="text-sm text-gray-500 mt-1">Consolidado por causas, etapas del proceso y resumen por granja (saca vs. muertos).</p>
-        </div>
-        <div class="px-6 pb-6 pt-4">
-            <div class="flex flex-wrap items-end gap-4 mb-4">
-                <div class="min-w-[200px]">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Periodo</label>
-                    <select id="mdp-periodo-tipo" class="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm">
+        <button type="button" id="btnToggleFiltrosMdp"
+            class="w-full flex items-center justify-between px-6 py-4 bg-gray-50 hover:bg-gray-100 transition">
+            <div class="flex items-center gap-2">
+                <span class="text-lg">🔎</span>
+                <h3 class="text-base font-semibold text-gray-800">Filtros de búsqueda</h3>
+            </div>
+            <svg id="iconoFiltrosMdp" class="w-5 h-5 text-gray-600 transition-transform duration-300 rotate-180"
+                fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+        </button>
+        <div id="contenidoFiltrosMdp" class="px-6 pb-6 pt-4">
+            <div class="filter-row-periodo flex flex-wrap items-end gap-4 mb-6">
+                <div class="flex-shrink-0" style="min-width: 200px;">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-calendar-alt mr-1 text-sky-600"></i> Fecha
+                    </label>
+                    <select id="mdp-periodo-tipo"
+                        class="w-full px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 text-sm cursor-pointer">
                         <option value="POR_FECHA" selected>Por fecha</option>
                         <option value="ENTRE_FECHAS">Entre fechas</option>
                         <option value="POR_MES">Por mes</option>
@@ -110,76 +116,96 @@ $anio = date('Y');
                         <option value="ULTIMA_SEMANA">Última semana</option>
                     </select>
                 </div>
-                <div id="mdp-bloque-fecha-unica" class="mdp-bloque-periodo min-w-[200px]">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
-                    <input id="mdp-fecha-unica" type="date" value="<?php echo htmlspecialchars($hoy, ENT_QUOTES, 'UTF-8'); ?>" class="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm">
+                <div id="mdp-bloque-fecha-unica" class="mdp-bloque-periodo flex-shrink-0 min-w-[200px]">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-calendar-day mr-1 text-sky-600"></i> Fecha
+                    </label>
+                    <input id="mdp-fecha-unica" type="date" value="<?php echo htmlspecialchars($hoy, ENT_QUOTES, 'UTF-8'); ?>"
+                        class="w-full px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 text-sm">
                 </div>
-                <div id="mdp-bloque-rango-fechas" class="mdp-bloque-periodo hidden flex gap-2">
-                    <div>
+                <div id="mdp-bloque-rango-fechas" class="mdp-bloque-periodo hidden flex-shrink-0 flex items-end gap-2">
+                    <div class="min-w-[180px]">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Desde</label>
-                        <input id="mdp-fecha-inicio" type="date" value="<?php echo htmlspecialchars($anio, ENT_QUOTES, 'UTF-8'); ?>-01-01" class="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm">
+                        <input id="mdp-fecha-inicio" type="date" value="<?php echo htmlspecialchars($hoy, ENT_QUOTES, 'UTF-8'); ?>"
+                            class="w-full px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 text-sm">
                     </div>
-                    <div>
+                    <div class="min-w-[180px]">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
-                        <input id="mdp-fecha-fin" type="date" value="<?php echo htmlspecialchars($hoy, ENT_QUOTES, 'UTF-8'); ?>" class="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm">
+                        <input id="mdp-fecha-fin" type="date" value="<?php echo htmlspecialchars($hoy, ENT_QUOTES, 'UTF-8'); ?>"
+                            class="w-full px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 text-sm">
                     </div>
                 </div>
-                <div id="mdp-bloque-mes-unico" class="mdp-bloque-periodo hidden min-w-[200px]">
+                <div id="mdp-bloque-mes-unico" class="mdp-bloque-periodo hidden flex-shrink-0 min-w-[200px]">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Mes</label>
-                    <input id="mdp-mes-unico" type="month" value="<?php echo htmlspecialchars($mesActual, ENT_QUOTES, 'UTF-8'); ?>" class="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm">
+                    <input id="mdp-mes-unico" type="month" value="<?php echo htmlspecialchars($mesActual, ENT_QUOTES, 'UTF-8'); ?>"
+                        class="w-full px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 text-sm">
                 </div>
-                <div id="mdp-bloque-rango-meses" class="mdp-bloque-periodo hidden flex gap-2">
-                    <div>
+                <div id="mdp-bloque-rango-meses" class="mdp-bloque-periodo hidden flex-shrink-0 flex items-end gap-2">
+                    <div class="min-w-[180px]">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Mes inicio</label>
-                        <input id="mdp-mes-inicio" type="month" value="<?php echo htmlspecialchars($anio, ENT_QUOTES, 'UTF-8'); ?>-01" class="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm">
+                        <input id="mdp-mes-inicio" type="month" value="<?php echo htmlspecialchars($anio, ENT_QUOTES, 'UTF-8'); ?>-01"
+                            class="w-full px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 text-sm">
                     </div>
-                    <div>
+                    <div class="min-w-[180px]">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Mes fin</label>
-                        <input id="mdp-mes-fin" type="month" value="<?php echo htmlspecialchars($mesActual, ENT_QUOTES, 'UTF-8'); ?>" class="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm">
+                        <input id="mdp-mes-fin" type="month" value="<?php echo htmlspecialchars($mesActual, ENT_QUOTES, 'UTF-8'); ?>"
+                            class="w-full px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 text-sm">
                     </div>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Granja (opcional)</label>
-                    <div class="selector-display flex gap-2">
-                        <input id="mdp-granja-resumen" type="text" class="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-300" readonly placeholder="Todas las granjas">
-                        <button type="button" id="mdp-btn-limpiar-granja" class="px-3 py-2 text-sm border rounded-lg bg-gray-100 hover:bg-gray-200" title="Quitar filtro de granja">
-                            <i class="fas fa-times"></i>
-                        </button>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-warehouse mr-1 text-sky-600"></i> Granja y campaña
+                    </label>
+                    <div class="selector-display">
+                        <input id="mrt-dsp-granja-resumen" type="text"
+                            class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:ring-2 focus:ring-sky-500 hc-sel-granja"
+                            readonly placeholder="Clic para seleccionar" value="">
                     </div>
-                    <input id="mdp-h-granja" type="hidden" value="">
-                    <input id="mdp-h-campania" type="hidden" value="">
+                    <input id="mrt-dsp-h-granja" type="hidden" value="">
+                    <input id="mrt-dsp-h-campania" type="hidden" value="">
                 </div>
             </div>
 
-            <button type="button" id="mdp-btn-consultar" class="px-6 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-medium inline-flex items-center gap-2">
-                <i class="fas fa-search"></i> Consultar
-            </button>
+            <div class="dashboard-actions mt-6 flex flex-wrap justify-start gap-4">
+                <button type="button" id="mdp-btn-consultar" class="btn-primary">
+                    <i class="fas fa-search"></i> Buscar
+                </button>
+                <button type="button" id="mdp-btn-limpiar" class="btn-outline">
+                    <i class="fas fa-eraser"></i> Limpiar
+                </button>
+            </div>
         </div>
     </div>
 
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
-        <div class="mdp-panel">
-            <h4 id="mdp-titulo-causas">Mortalidad por causa</h4>
-            <div id="mdp-tabla-causas" class="overflow-x-auto"></div>
+        <div class="tabla-listado-wrapper bg-white rounded-xl shadow-md p-5 mdp-tabla-wrap">
+            <h4 class="mdp-panel-title" id="mdp-titulo-causas">Mortalidad por causa</h4>
+            <div class="table-wrapper" id="mdp-tabla-causas">
+                <p class="mdp-empty">Use Buscar para cargar el análisis (todas las granjas si no elige una).</p>
+            </div>
         </div>
-        <div class="mdp-panel">
-            <h4 id="mdp-titulo-etapas">Mortalidad por etapa del proceso</h4>
-            <div id="mdp-tabla-etapas" class="overflow-x-auto"></div>
+        <div class="tabla-listado-wrapper bg-white rounded-xl shadow-md p-5 mdp-tabla-wrap">
+            <h4 class="mdp-panel-title" id="mdp-titulo-etapas">Mortalidad por etapa del proceso</h4>
+            <div class="table-wrapper" id="mdp-tabla-etapas">
+                <p class="mdp-empty">Use Buscar para cargar el análisis.</p>
+            </div>
         </div>
     </div>
 
-    <div class="mdp-panel">
-        <h4>Resumen de mortalidad por granja</h4>
-        <div id="mdp-tabla-resumen" class="overflow-x-auto"></div>
+    <div class="tabla-listado-wrapper bg-white rounded-xl shadow-md p-5 mb-4 mdp-tabla-wrap">
+        <h4 class="mdp-panel-title">Resumen de mortalidad por granja</h4>
+        <div class="table-wrapper" id="mdp-tabla-resumen">
+            <p class="mdp-empty">Use Buscar para cargar el resumen.</p>
+        </div>
     </div>
 </div>
 
 <?php
-$gmc_id_prefix = 'mdp';
-$gmc_shell_panel_id = 'mdp-modal-granjas';
+$gmc_id_prefix = 'mrt-dsp';
+$gmc_shell_panel_id = 'mrt-dsp-modal-granjas';
 $gmc_show_chk_todas = false;
 require __DIR__ . '/../../../core/lib/modals/modal_granjas_campanias.php';
 ?>

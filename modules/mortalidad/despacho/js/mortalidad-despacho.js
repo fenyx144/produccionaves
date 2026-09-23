@@ -3,7 +3,7 @@
 
     const cfg = window.MORT_DESPACHO_CFG || {};
     let cargando = false;
-    let mdpGmc = null;
+    let mrtDspGmc = null;
 
     function escapeHtml(s) {
         return String(s ?? '')
@@ -38,9 +38,9 @@
     function tituloPeriodo(rango) {
         if (!rango || !rango.desde) return '';
         if (rango.desde === rango.hasta) {
-            return 'Día ' + formatearFechaDMY(rango.desde);
+            return formatearFechaDMY(rango.desde);
         }
-        return 'Del ' + formatearFechaDMY(rango.desde) + ' al ' + formatearFechaDMY(rango.hasta);
+        return formatearFechaDMY(rango.desde) + ' – ' + formatearFechaDMY(rango.hasta);
     }
 
     function leerFiltrosFormulario() {
@@ -52,8 +52,8 @@
             mesUnico: ($('#mdp-mes-unico').val() || '').trim(),
             mesInicio: ($('#mdp-mes-inicio').val() || '').trim(),
             mesFin: ($('#mdp-mes-fin').val() || '').trim(),
-            granja: ($('#mdp-h-granja').val() || '').trim(),
-            campania: ($('#mdp-h-campania').val() || '').trim()
+            granja: ($('#mrt-dsp-h-granja').val() || '').trim(),
+            campania: ($('#mrt-dsp-h-campania').val() || '').trim()
         };
     }
 
@@ -71,24 +71,31 @@
         }
     }
 
-    function renderTablaSimple(containerId, tituloId, titulo, filas, cols, totalRow) {
-        $(tituloId).text(titulo);
-        let html = '<table class="mdp-tabla w-full"><thead><tr>';
+    function renderTablaSimple(containerId, cols, filas, totalRow) {
+        if (!filas || filas.length === 0) {
+            $(containerId).html('<p class="mdp-empty">Sin datos para el periodo y filtros seleccionados.</p>');
+            return;
+        }
+        let html = '<table class="data-table config-table w-full text-sm border-collapse"><thead><tr>';
         cols.forEach(function (c) {
-            html += '<th>' + escapeHtml(c.label) + '</th>';
+            const cls = c.thClass ? ' class="' + c.thClass + '"' : '';
+            html += '<th' + cls + '>' + escapeHtml(c.label) + '</th>';
         });
         html += '</tr></thead><tbody>';
-        filas.forEach(function (f) {
+        filas.forEach(function (f, idx) {
             html += '<tr>';
             cols.forEach(function (c) {
-                html += '<td>' + escapeHtml(c.render(f)) + '</td>';
+                const tdCls = c.tdClass ? ' class="' + c.tdClass + '"' : '';
+                const val = c.render(f, idx);
+                html += '<td' + tdCls + '>' + escapeHtml(val) + '</td>';
             });
             html += '</tr>';
         });
         if (totalRow) {
             html += '<tr class="mdp-fila-total">';
             cols.forEach(function (c, idx) {
-                html += '<td>' + escapeHtml(totalRow(c, idx)) + '</td>';
+                const tdCls = c.tdClass ? ' class="' + c.tdClass + '"' : '';
+                html += '<td' + tdCls + '>' + escapeHtml(totalRow(c, idx)) + '</td>';
             });
             html += '</tr>';
         }
@@ -96,80 +103,104 @@
         $(containerId).html(html);
     }
 
-    function pintarCausas(data, titulo) {
+    function setTituloPanel(tituloId, base, rangoTexto) {
+        const sub = rangoTexto ? ' <span>· ' + escapeHtml(rangoTexto) + '</span>' : '';
+        $(tituloId).html(escapeHtml(base) + sub);
+    }
+
+    function pintarCausas(data, rangoTexto) {
         const filas = (data && data.filas) || [];
         const total = (data && data.total) || 0;
+        setTituloPanel('#mdp-titulo-causas', 'Mortalidad por causa', rangoTexto);
         renderTablaSimple(
             '#mdp-tabla-causas',
-            '#mdp-titulo-causas',
-            titulo,
-            filas,
             [
+                { label: 'N°', thClass: 'col-num', tdClass: 'col-num', render: function (_f, idx) { return String(idx + 1); } },
                 { label: 'Causas', render: function (f) { return f.causa; } },
-                { label: 'Cant. mort.', render: function (f) { return formatearNumero(f.cantidad); } },
+                { label: 'Cant. mort.', thClass: 'col-qty', tdClass: 'col-qty', render: function (f) { return formatearNumero(f.cantidad); } },
                 {
                     label: '%',
+                    thClass: 'col-pct',
+                    tdClass: 'col-pct',
                     render: function (f) {
                         return formatearNumero(f.porcentaje) + '%';
                     }
                 }
             ],
-            function (c, idx) {
-                if (idx === 0) return 'Total';
-                if (idx === 1) return formatearNumero(total);
+            filas,
+            function (_c, idx) {
+                if (idx === 0) return '';
+                if (idx === 1) return 'Total';
+                if (idx === 2) return formatearNumero(total);
                 return '100%';
             }
         );
     }
 
-    function pintarEtapas(data, titulo) {
+    function pintarEtapas(data, rangoTexto) {
         const filas = (data && data.filas) || [];
         const total = (data && data.total) || 0;
+        setTituloPanel('#mdp-titulo-etapas', 'Mortalidad por etapa del proceso', rangoTexto);
         renderTablaSimple(
             '#mdp-tabla-etapas',
-            '#mdp-titulo-etapas',
-            titulo,
-            filas,
             [
+                { label: 'N°', thClass: 'col-num', tdClass: 'col-num', render: function (_f, idx) { return String(idx + 1); } },
                 { label: 'Etapa', render: function (f) { return f.etapa; } },
-                { label: 'Cant. mort.', render: function (f) { return formatearNumero(f.cantidad); } },
+                { label: 'Cant. mort.', thClass: 'col-qty', tdClass: 'col-qty', render: function (f) { return formatearNumero(f.cantidad); } },
                 {
                     label: '%',
+                    thClass: 'col-pct',
+                    tdClass: 'col-pct',
                     render: function (f) {
                         return formatearNumero(f.porcentaje) + '%';
                     }
                 }
             ],
-            function (c, idx) {
-                if (idx === 0) return 'Total';
-                if (idx === 1) return formatearNumero(total);
+            filas,
+            function (_c, idx) {
+                if (idx === 0) return '';
+                if (idx === 1) return 'Total';
+                if (idx === 2) return formatearNumero(total);
                 return '100%';
             }
         );
     }
 
     function pintarResumen(filas) {
-        let html = '<table class="mdp-tabla w-full"><thead><tr>';
-        html += '<th>Fecha</th><th>N°</th><th>Cencos</th><th>Granja</th>';
-        html += '<th class="text-right">Cantidad</th><th class="text-right">Muertos</th>';
-        html += '<th class="text-right">% Mort. Despacho</th></tr></thead><tbody>';
         if (!filas || filas.length === 0) {
-            html += '<tr><td colspan="7" class="text-center text-gray-500 py-6">Sin registros de despacho en el periodo.</td></tr>';
-        } else {
-            filas.forEach(function (r) {
-                html += '<tr>';
-                html += '<td>' + escapeHtml(formatearFechaYMDslash(r.fecha)) + '</td>';
-                html += '<td>' + escapeHtml(r.numero) + '</td>';
-                html += '<td>' + escapeHtml(r.cencos) + '</td>';
-                html += '<td>' + escapeHtml(r.granja) + '</td>';
-                html += '<td class="text-right">' + escapeHtml(formatearNumero(r.cantidad, 2)) + '</td>';
-                html += '<td class="text-right">' + escapeHtml(r.muertos > 0 ? formatearNumero(r.muertos) : '-') + '</td>';
-                html += '<td class="text-right">' + escapeHtml(formatearNumero(r.porcentaje, 2)) + '%</td>';
-                html += '</tr>';
-            });
+            $('#mdp-tabla-resumen').html('<p class="mdp-empty">Sin registros de despacho en el periodo.</p>');
+            return;
         }
-        html += '</tbody></table>';
-        $('#mdp-tabla-resumen').html(html);
+        const rows = filas.map(function (r, idx) {
+            return {
+                numero: idx + 1,
+                fecha: formatearFechaYMDslash(r.fecha),
+                cencos: r.cencos,
+                granja: r.granja,
+                cantidad: formatearNumero(r.cantidad, 2),
+                muertos: r.muertos > 0 ? formatearNumero(r.muertos) : '-',
+                porcentaje: formatearNumero(r.porcentaje, 2) + '%'
+            };
+        });
+        renderTablaSimple(
+            '#mdp-tabla-resumen',
+            [
+                { label: 'N°', thClass: 'col-num', tdClass: 'col-num', render: function (f) { return String(f.numero); } },
+                { label: 'Fecha', render: function (f) { return f.fecha; } },
+                { label: 'Cencos', render: function (f) { return f.cencos; } },
+                { label: 'Granja', render: function (f) { return f.granja; } },
+                { label: 'Cantidad', thClass: 'col-qty', tdClass: 'col-qty', render: function (f) { return f.cantidad; } },
+                { label: 'Muertos', thClass: 'col-qty', tdClass: 'col-qty', render: function (f) { return f.muertos; } },
+                {
+                    label: '% Mort. Despacho',
+                    thClass: 'col-pct',
+                    tdClass: 'col-pct',
+                    render: function (f) { return f.porcentaje; }
+                }
+            ],
+            rows,
+            null
+        );
     }
 
     function cargarAnalisis() {
@@ -183,9 +214,9 @@
                     Swal.fire({ icon: 'error', title: 'Error', text: (j && j.message) || 'No se pudo cargar el análisis.' });
                     return;
                 }
-                const titulo = tituloPeriodo(j.rango);
-                pintarCausas(j.causas, 'Mortalidad por causa — ' + titulo);
-                pintarEtapas(j.etapas, 'Mortalidad por etapa del proceso — ' + titulo);
+                const rangoTexto = tituloPeriodo(j.rango);
+                pintarCausas(j.causas, rangoTexto);
+                pintarEtapas(j.etapas, rangoTexto);
                 pintarResumen(j.resumenGranjas || []);
             })
             .fail(function () {
@@ -198,29 +229,44 @@
     }
 
     function syncGranjaDisplay() {
-        const g = ($('#mdp-h-granja').val() || '').trim();
-        const c = ($('#mdp-h-campania').val() || '').trim();
-        const inp = document.getElementById('mdp-granja-resumen');
+        const g = ($('#mrt-dsp-h-granja').val() || '').trim();
+        const c = ($('#mrt-dsp-h-campania').val() || '').trim();
+        const inp = document.getElementById('mrt-dsp-granja-resumen');
         if (!inp) return;
         if (g && c) {
             let nom = '';
             const meta = (cfg.granjasMeta || []).find(function (m) { return m.granja === g; });
             if (meta) nom = meta.nombre || meta.nombre_granja || '';
             inp.value = g + (nom ? ' ' + nom : '') + ' - ' + c;
-            inp.title = 'Granja ' + g + ', campaña ' + c;
-        } else if (g) {
-            inp.value = g;
-            inp.title = 'Granja ' + g + ' (todas las campañas del filtro)';
+            inp.title = 'Granja ' + g + (nom ? ' ' + nom : '') + ', campaña ' + c + ' — Clic para cambiar';
         } else {
             inp.value = '';
-            inp.placeholder = 'Todas las granjas';
-            inp.title = 'Consolidado de todas las granjas';
+            inp.placeholder = 'Clic para seleccionar';
+            inp.title = 'Sin filtro: se incluyen todas las granjas';
         }
     }
 
+    function limpiarFiltros() {
+        const hoy = new Date();
+        const y = hoy.getFullYear();
+        const m = String(hoy.getMonth() + 1).padStart(2, '0');
+        const d = String(hoy.getDate()).padStart(2, '0');
+        const hoyStr = y + '-' + m + '-' + d;
+        $('#mdp-periodo-tipo').val('POR_FECHA');
+        $('#mdp-fecha-unica').val(hoyStr);
+        $('#mdp-fecha-inicio').val(hoyStr);
+        $('#mdp-fecha-fin').val(hoyStr);
+        $('#mdp-mes-unico').val(y + '-' + m);
+        $('#mdp-mes-inicio').val(y + '-01');
+        $('#mdp-mes-fin').val(y + '-' + m);
+        $('#mrt-dsp-h-granja, #mrt-dsp-h-campania').val('');
+        syncVisibilidadPeriodo();
+        syncGranjaDisplay();
+    }
+
     function getCampaniasUrl() {
-        var f = leerFiltrosFormulario();
-        var p = new URLSearchParams({
+        const f = leerFiltrosFormulario();
+        const p = new URLSearchParams({
             periodoTipo: f.periodoTipo || 'POR_FECHA',
             fechaUnica: f.fechaUnica || '',
             fechaInicio: f.fechaInicio || '',
@@ -229,38 +275,38 @@
             mesInicio: f.mesInicio || '',
             mesFin: f.mesFin || ''
         });
-        var base = String(cfg.apiUrl || '');
-        var parentDir = base.substring(0, base.lastIndexOf('/'));
+        const base = String(cfg.apiUrl || '');
+        let parentDir = base.substring(0, base.lastIndexOf('/'));
         parentDir = parentDir.substring(0, parentDir.lastIndexOf('/'));
         return parentDir + '/get_campanias_mortalidad.php?' + p.toString();
     }
 
-    function initMdpGmc() {
-        if (!window.GmcGranjasCampanias || mdpGmc) {
+    function initMrtDspGmc() {
+        if (!window.GmcGranjasCampanias || mrtDspGmc) {
             return;
         }
-        mdpGmc = window.GmcGranjasCampanias.create({
-            prefix: 'mdp',
-            shellPanelId: 'mdp-modal-granjas',
+        mrtDspGmc = window.GmcGranjasCampanias.create({
+            prefix: 'mrt-dsp',
+            shellPanelId: 'mrt-dsp-modal-granjas',
             mode: 'single',
-            bodyOpenClass: 'mdp-modal-granjas-open',
-            openTriggerId: 'mdp-granja-resumen',
+            bodyOpenClass: 'mrt-dsp-modal-granjas-open',
+            openTriggerId: 'mrt-dsp-granja-resumen',
             getCodigoSeis: function () {
-                var g = ($('#mdp-h-granja').val() || '').trim();
-                var c = ($('#mdp-h-campania').val() || '').trim();
+                const g = ($('#mrt-dsp-h-granja').val() || '').trim();
+                const c = ($('#mrt-dsp-h-campania').val() || '').trim();
                 return g && c ? g + c : '';
             },
             setCodigoSeis: function (cod) {
                 if (cod && cod.length >= 6) {
-                    $('#mdp-h-granja').val(cod.slice(0, 3));
-                    $('#mdp-h-campania').val(cod.slice(-3));
+                    $('#mrt-dsp-h-granja').val(cod.slice(0, 3));
+                    $('#mrt-dsp-h-campania').val(cod.slice(-3));
                 } else {
-                    $('#mdp-h-granja, #mdp-h-campania').val('');
+                    $('#mrt-dsp-h-granja, #mrt-dsp-h-campania').val('');
                 }
                 syncGranjaDisplay();
             },
             cencosFetch: function () {
-                var url = getCampaniasUrl();
+                const url = getCampaniasUrl();
                 if (!url) {
                     return Promise.resolve({ granjas: cfg.granjasMeta || [], campanias_por_granja: {}, aviso: '' });
                 }
@@ -272,13 +318,17 @@
     $(function () {
         syncVisibilidadPeriodo();
         syncGranjaDisplay();
-        initMdpGmc();
+        initMrtDspGmc();
+
+        $('#btnToggleFiltrosMdp').on('click', function () {
+            $('#contenidoFiltrosMdp').slideToggle(200);
+            $('#iconoFiltrosMdp').toggleClass('rotate-180');
+        });
 
         $('#mdp-periodo-tipo').on('change', syncVisibilidadPeriodo);
         $('#mdp-btn-consultar').on('click', cargarAnalisis);
-        $('#mdp-btn-limpiar-granja').on('click', function () {
-            $('#mdp-h-granja, #mdp-h-campania').val('');
-            syncGranjaDisplay();
+        $('#mdp-btn-limpiar').on('click', function () {
+            limpiarFiltros();
         });
 
         cargarAnalisis();
