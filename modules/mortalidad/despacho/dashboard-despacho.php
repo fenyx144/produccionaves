@@ -32,6 +32,7 @@ if ($conexion) {
 $baseModUrl = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? ''));
 $modMortUrl = str_replace('\\', '/', dirname(dirname($_SERVER['SCRIPT_NAME'] ?? '')));
 $apiUrl = $baseModUrl . '/get_analisis_despacho.php';
+$campaniasApiUrl = $modMortUrl . '/get_campanias_mortalidad.php';
 $filtrosApiUrl = $modMortUrl . '/listado/get_opciones_filtros.php';
 $hoy = date('Y-m-d');
 $mesActual = date('Y-m');
@@ -207,12 +208,14 @@ $anio = date('Y');
 $gmc_id_prefix = 'mrt-dsp';
 $gmc_shell_panel_id = 'mrt-dsp-modal-granjas';
 $gmc_show_chk_todas = false;
+$gmc_show_periodo_campanias = true;
 require __DIR__ . '/../../../core/lib/modals/modal_granjas_campanias.php';
 ?>
 
 <script>
 window.MORT_DESPACHO_CFG = {
     apiUrl: <?= json_encode($apiUrl, JSON_UNESCAPED_UNICODE) ?>,
+    campaniasUrl: <?= json_encode($campaniasApiUrl, JSON_UNESCAPED_UNICODE) ?>,
     filtrosApiUrl: <?= json_encode($filtrosApiUrl, JSON_UNESCAPED_UNICODE) ?>,
     granjasMeta: <?php
         $gm = [];
@@ -227,6 +230,7 @@ window.MORT_DESPACHO_CFG = {
     ?>
 };
 </script>
+<script src="../../../assets/js/gmc-periodo-campanias.js?v=<?php echo (int) @filemtime(__DIR__ . '/../../../assets/js/gmc-periodo-campanias.js'); ?>"></script>
 <script src="../js/gmc-granjas-campanias.js?v=<?php echo (int) @filemtime(__DIR__ . '/../js/gmc-granjas-campanias.js'); ?>"></script>
 <script src="js/mortalidad-despacho.js?v=<?php echo (int) @filemtime(__DIR__ . '/js/mortalidad-despacho.js'); ?>"></script>
 </body>

@@ -265,20 +265,22 @@
     }
 
     function getCampaniasUrl() {
-        const f = leerFiltrosFormulario();
-        const p = new URLSearchParams({
-            periodoTipo: f.periodoTipo || 'POR_FECHA',
-            fechaUnica: f.fechaUnica || '',
-            fechaInicio: f.fechaInicio || '',
-            fechaFin: f.fechaFin || '',
-            mesUnico: f.mesUnico || '',
-            mesInicio: f.mesInicio || '',
-            mesFin: f.mesFin || ''
-        });
-        const base = String(cfg.apiUrl || '');
-        let parentDir = base.substring(0, base.lastIndexOf('/'));
-        parentDir = parentDir.substring(0, parentDir.lastIndexOf('/'));
-        return parentDir + '/get_campanias_mortalidad.php?' + p.toString();
+        const codes = (cfg.granjasMeta || []).map(function (g) { return g.granja || ''; }).filter(Boolean).join(',');
+        if (!codes) {
+            return '';
+        }
+        const p = new URLSearchParams({ granjas: codes });
+        // Periodo del modal (Campañas presentes en: Desde/Hasta), no el filtro del dashboard.
+        if (window.GmcPeriodoCampanias) {
+            window.GmcPeriodoCampanias.appendToSearchParams(p, 'mrt-dsp');
+        } else {
+            p.set('periodoTipo', 'TODOS');
+        }
+        const base = String(cfg.campaniasUrl || '');
+        if (!base) {
+            return '';
+        }
+        return base + (base.indexOf('?') >= 0 ? '&' : '?') + p.toString();
     }
 
     function initMrtDspGmc() {
@@ -310,7 +312,25 @@
                 if (!url) {
                     return Promise.resolve({ granjas: cfg.granjasMeta || [], campanias_por_granja: {}, aviso: '' });
                 }
-                return fetch(url, { credentials: 'same-origin' }).then(function (r) { return r.json(); });
+                return fetch(url, { credentials: 'same-origin', cache: 'no-store' })
+                    .then(function (r) { return r.json(); })
+                    .then(function (j) {
+                        return {
+                            granjas: cfg.granjasMeta || [],
+                            campanias_por_granja: (j && j.by_granja) ? j.by_granja : {},
+                            aviso: ''
+                        };
+                    })
+                    .catch(function () {
+                        return {
+                            granjas: cfg.granjasMeta || [],
+                            campanias_por_granja: {},
+                            aviso: 'Error al cargar campañas'
+                        };
+                    });
+            },
+            onApply: function () {
+                syncGranjaDisplay();
             }
         });
     }
