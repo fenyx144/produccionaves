@@ -7,7 +7,7 @@ declare(strict_types=1);
  *
  * - amd_dashboard_modulos: upsert menú PA desde pmig_menu_definicion() (incluye Despacho).
  * - amd_dashboard_modulos Sanidad: seed canónico (sip_menu_catalog_seed_modulos).
- * - adm_rol_progr_modulo: otorga menú PA completo a roles cod_rol SISTEMAS / GESTINAVES
+ * - adm_rol_progr_modulo: otorga menú PA completo al rol cod_rol «SISTEMAS GESTIONAVES»
  *   (y alias por nom_rol Sistemas / Gestion Aves); en Sanidad asegura grp + item Despacho.
  *
  * Simulación: sync_acl_mortalidad_pa.php

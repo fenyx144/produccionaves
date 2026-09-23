@@ -75,12 +75,11 @@ const PMIG_ROLES_NOMBRES = [
 ];
 
 /**
- * cod_rol objetivo en producción (p. ej. SISTEMAS, GESTINAVES).
- * Se resuelven en PA y en Sanidad; no se hardcodean id_rol.
+ * cod_rol objetivo en producción (valor real en adm_rol).
+ * Se resuelve en PA y en Sanidad; no se hardcodea id_rol.
  */
 const PMIG_ROLES_COD_OBJETIVO = [
-    'SISTEMAS',
-    'GESTINAVES',
+    'SISTEMAS GESTIONAVES',
 ];
 
 /** adm_rol.id_programa es tinyint(4): límite superior permitido. */
