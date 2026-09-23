@@ -74,6 +74,15 @@ const PMIG_ROLES_NOMBRES = [
     'Gestion Aves',
 ];
 
+/**
+ * cod_rol objetivo en producción (p. ej. SISTEMAS, GESTINAVES).
+ * Se resuelven en PA y en Sanidad; no se hardcodean id_rol.
+ */
+const PMIG_ROLES_COD_OBJETIVO = [
+    'SISTEMAS',
+    'GESTINAVES',
+];
+
 /** adm_rol.id_programa es tinyint(4): límite superior permitido. */
 const PMIG_MAX_ID_PROGRAMA = 127;
 
@@ -226,9 +235,72 @@ function pmig_map_cod_mod(string $codModSanidad): string
         'item-sp-4-mort-hist' => 'item-pa-mort-hist',
         'item-sp-4-mort-aud' => 'item-pa-mort-aud',
         'item-sp-4-mort-inf-ctb' => 'item-pa-mort-inf-ctb',
+        'item-sp-4-mort-vnt' => 'item-pa-mort-ven',
+        'item-sp-4-mort-dsp' => 'item-pa-mort-dsp',
+        'item-sp-4-mort-grf' => 'item-pa-mort-grf',
+        'item-sp-4-mort-grfh' => 'item-pa-mort-grfh',
     ];
 
     return $map[$codModSanidad] ?? $codModSanidad;
+}
+
+/**
+ * Roles destino (Sistemas / Gestión Aves) por cod_rol y nom_rol en PA o Sanidad.
+ *
+ * @return list<array{cod_rol: string, nom_rol: string, id_sanidad: int, id_pa: int}>
+ */
+function pmig_roles_objetivo_resueltos(mysqli $conn, int $idProgPa, int $idProgSanidad): array
+{
+    $out = [];
+
+    $merge = static function (?array $row, bool $esSanidad) use (&$out): void {
+        if ($row === null || trim((string) ($row['cod_rol'] ?? '')) === '') {
+            return;
+        }
+        $key = strtoupper(trim((string) $row['cod_rol']));
+        if (!isset($out[$key])) {
+            $out[$key] = [
+                'cod_rol' => trim((string) $row['cod_rol']),
+                'nom_rol' => trim((string) ($row['nom_rol'] ?? '')),
+                'id_sanidad' => 0,
+                'id_pa' => 0,
+            ];
+        }
+        if ($esSanidad) {
+            $out[$key]['id_sanidad'] = (int) ($row['id'] ?? 0);
+        } else {
+            $out[$key]['id_pa'] = (int) ($row['id'] ?? 0);
+        }
+        if ($out[$key]['nom_rol'] === '') {
+            $out[$key]['nom_rol'] = trim((string) ($row['nom_rol'] ?? ''));
+        }
+    };
+
+    foreach (PMIG_ROLES_COD_OBJETIVO as $codRol) {
+        $codRol = trim((string) $codRol);
+        if ($codRol === '') {
+            continue;
+        }
+        $merge(pmig_rol_por_cod($conn, $idProgPa, $codRol), false);
+        $merge(pmig_rol_por_cod($conn, $idProgSanidad, $codRol), true);
+    }
+
+    foreach (PMIG_ROLES_NOMBRES as $nomRol) {
+        $merge(pmig_rol_por_nombre($conn, $idProgPa, $nomRol), false);
+        $merge(pmig_rol_por_nombre($conn, $idProgSanidad, $nomRol), true);
+    }
+
+    return array_values($out);
+}
+
+/** cod_mod Sanidad mínimos para ver la sección Despacho en el shell Sanidad. */
+function pmig_cod_mods_sanidad_despacho(): array
+{
+    return [
+        'grp-sp-4',
+        'grp-sp-4-mort',
+        'item-sp-4-mort-dsp',
+    ];
 }
 
 function pmig_esc(string $s): string
@@ -538,38 +610,38 @@ function pmig_asegurar_programa(mysqli $conn, bool $ejecutar): array
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * @return array{ok:bool,insertados:int,existentes:int}
+ * Inserta o actualiza el menú Mortalidad PA (amd_dashboard_modulos).
+ *
+ * @return array{ok:bool,insertados:int,actualizados:int,total:int}
  */
 function pmig_asegurar_menu(mysqli $conn, int $idPrograma, bool $ejecutar): array
 {
     $idProgStr = (string) $idPrograma;
     $insertados = 0;
-    $existentes = 0;
+    $actualizados = 0;
+    $total = count(pmig_menu_definicion());
 
-    $stChk = $conn->prepare('SELECT 1 FROM amd_dashboard_modulos WHERE id_programa = ? AND cod_mod = ? LIMIT 1');
-    $stIns = $ejecutar
-        ? $conn->prepare(
-            'INSERT INTO amd_dashboard_modulos (id_programa, cod_mod, tipo, parent_cod, nom_mod, label_short, icono, url, orden)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-        )
-        : null;
+    if (!$ejecutar) {
+        return ['ok' => true, 'insertados' => $total, 'actualizados' => 0, 'total' => $total];
+    }
+
+    $sql = 'INSERT INTO amd_dashboard_modulos (id_programa, cod_mod, tipo, parent_cod, nom_mod, label_short, icono, url, orden)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+              tipo = VALUES(tipo),
+              parent_cod = VALUES(parent_cod),
+              nom_mod = VALUES(nom_mod),
+              label_short = VALUES(label_short),
+              icono = VALUES(icono),
+              url = VALUES(url),
+              orden = VALUES(orden)';
+    $st = $conn->prepare($sql);
+    if (!$st) {
+        return ['ok' => false, 'insertados' => 0, 'actualizados' => 0, 'total' => $total];
+    }
 
     foreach (pmig_menu_definicion() as $row) {
         $codMod = (string) $row['cod_mod'];
-        $existe = false;
-        if ($stChk) {
-            $stChk->bind_param('ss', $idProgStr, $codMod);
-            $stChk->execute();
-            $existe = $stChk->get_result()->fetch_assoc() !== null;
-        }
-        if ($existe) {
-            $existentes++;
-            continue;
-        }
-        if (!$ejecutar || !$stIns) {
-            $insertados++;
-            continue;
-        }
         $tipo = (string) $row['tipo'];
         $parent = $row['parent_cod'];
         $nom = (string) $row['nom_mod'];
@@ -577,20 +649,121 @@ function pmig_asegurar_menu(mysqli $conn, int $idPrograma, bool $ejecutar): arra
         $icono = (string) $row['icono'];
         $url = (string) $row['url'];
         $orden = (int) $row['orden'];
-        $stIns->bind_param('ssssssssi', $idProgStr, $codMod, $tipo, $parent, $nom, $label, $icono, $url, $orden);
-        if ($stIns->execute()) {
+        $st->bind_param('ssssssssi', $idProgStr, $codMod, $tipo, $parent, $nom, $label, $icono, $url, $orden);
+        if (!$st->execute()) {
+            continue;
+        }
+        if ($st->affected_rows === 1) {
             $insertados++;
+        } elseif ($st->affected_rows === 2) {
+            $actualizados++;
         }
     }
+    $st->close();
 
-    if ($stChk) {
-        $stChk->close();
+    return ['ok' => true, 'insertados' => $insertados, 'actualizados' => $actualizados, 'total' => $total];
+}
+
+/**
+ * Sincroniza menú y permisos Mortalidad PA para roles SISTEMAS / GESTINAVES (y alias por nom_rol).
+ * Idempotente: se puede ejecutar tras cada despliegue con módulos nuevos (p. ej. Despacho).
+ *
+ * @return array{ok:bool,acciones:list<string>,detalleRoles:list<array<string,mixed>>,error?:string}
+ */
+function pmig_sincronizar_acl_mortalidad_pa(mysqli $conn, bool $ejecutar): array
+{
+    $acciones = [];
+    $detalleRoles = [];
+
+    require_once __DIR__ . '/../../../core/lib/sip_menu_catalog_lib.php';
+
+    $progSanidad = pmig_programa_por_nombre($conn, PMIG_NOMBRE_PROGRAMA_SANIDAD);
+    if ($progSanidad === null) {
+        return ['ok' => false, 'acciones' => [], 'detalleRoles' => [], 'error' => 'No se encontró el programa Sanidad.'];
     }
-    if ($stIns) {
-        $stIns->close();
+    $idProgSanidad = (int) $progSanidad['id'];
+
+    $prog = pmig_asegurar_programa($conn, $ejecutar);
+    foreach ($prog['mensajes'] as $m) {
+        $acciones[] = $m;
+    }
+    if (!$prog['ok']) {
+        return ['ok' => false, 'acciones' => $acciones, 'detalleRoles' => [], 'error' => 'Programa PA no disponible.'];
+    }
+    $idProgPa = (int) $prog['id'];
+
+    $menu = pmig_asegurar_menu($conn, $idProgPa, $ejecutar);
+    $acciones[] = 'Menú PA: ' . $menu['insertados'] . ' insertados, ' . ($menu['actualizados'] ?? 0)
+        . ' actualizados (total definición ' . ($menu['total'] ?? 0) . ').';
+
+    if ($ejecutar) {
+        $seedSan = sip_menu_catalog_seed_modulos($conn, $idProgSanidad);
+        $acciones[] = 'Menú Sanidad (catálogo canónico): ' . ($seedSan['message'] ?? 'ok');
+    } else {
+        $acciones[] = 'Simulación: se ejecutaría sip_menu_catalog_seed_modulos en Sanidad.';
     }
 
-    return ['ok' => true, 'insertados' => $insertados, 'existentes' => $existentes];
+    $codModsPa = pmig_menu_cod_mods();
+    $codModsSanDesp = pmig_cod_mods_sanidad_despacho();
+    $roles = pmig_roles_objetivo_resueltos($conn, $idProgPa, $idProgSanidad);
+    if ($roles === []) {
+        $acciones[] = 'AVISO: no se encontraron roles objetivo (cod_rol '
+            . implode(', ', PMIG_ROLES_COD_OBJETIVO) . ' o nom_rol ' . implode(', ', PMIG_ROLES_NOMBRES) . ').';
+    }
+
+    foreach ($roles as $meta) {
+        $codRol = (string) $meta['cod_rol'];
+        $nomRol = (string) ($meta['nom_rol'] !== '' ? $meta['nom_rol'] : $codRol);
+
+        $origenSan = null;
+        if ((int) ($meta['id_sanidad'] ?? 0) > 0) {
+            $origenSan = [
+                'id' => (int) $meta['id_sanidad'],
+                'cod_rol' => $codRol,
+                'nom_rol' => $nomRol,
+            ];
+        } else {
+            $origenSan = pmig_rol_por_cod($conn, $idProgSanidad, $codRol)
+                ?? pmig_rol_por_nombre($conn, $idProgSanidad, $nomRol);
+        }
+
+        $modsOrigen = [];
+        if ($origenSan !== null) {
+            $modsOrigen = pmig_permisos_mortalidad_rol($conn, (int) $origenSan['id'], $idProgSanidad);
+        }
+
+        $r = pmig_asegurar_rol($conn, $idProgPa, $codRol, $nomRol, $ejecutar);
+        $acciones[] = $r['mensaje'];
+        if (!$r['ok']) {
+            continue;
+        }
+        $idRolPa = (int) $r['id'];
+
+        $permPa = pmig_asegurar_permisos($conn, $idRolPa, $idProgPa, $codModsPa, $ejecutar);
+        $acciones[] = 'Permisos PA rol ' . $codRol . ': ' . $permPa['insertados'] . ' nuevos, '
+            . $permPa['existentes'] . ' ya existían.';
+
+        if ($origenSan !== null) {
+            $permSan = pmig_asegurar_permisos(
+                $conn,
+                (int) $origenSan['id'],
+                $idProgSanidad,
+                $codModsSanDesp,
+                $ejecutar
+            );
+            $acciones[] = 'Permisos Sanidad (Despacho) rol ' . $codRol . ': ' . $permSan['insertados']
+                . ' nuevos, ' . $permSan['existentes'] . ' ya existían.';
+        }
+
+        $detalleRoles[] = [
+            'cod_rol' => $codRol,
+            'nom_rol' => $nomRol,
+            'id_rol_pa' => $idRolPa,
+            'mods_origen_sanidad' => $modsOrigen,
+        ];
+    }
+
+    return ['ok' => true, 'acciones' => $acciones, 'detalleRoles' => $detalleRoles];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -996,8 +1169,20 @@ function pmig_asignar_usuarios(mysqli $conn, string $codRol, array $codigos, boo
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Ejecución
+// Ejecución (solo cuando este archivo es el script principal, no al require)
 // ─────────────────────────────────────────────────────────────────────────────
+
+$pmigEsScriptPrincipal = false;
+if ($esCli) {
+    $pmigEsScriptPrincipal = realpath((string) ($argv[0] ?? '')) === realpath(__FILE__)
+        || basename((string) ($argv[0] ?? '')) === basename(__FILE__);
+} else {
+    $pmigEsScriptPrincipal = realpath((string) ($_SERVER['SCRIPT_FILENAME'] ?? '')) === realpath(__FILE__);
+}
+
+if (!$pmigEsScriptPrincipal) {
+    return;
+}
 
 $acciones = [];
 $detalleRoles = [];
@@ -1041,29 +1226,38 @@ if (!$conn) {
 
         // Paso 3: menú Mortalidad del proyecto PA.
         $menu = pmig_asegurar_menu($conn, $idProgPa, $ejecutar);
-        $acciones[] = 'Menú Mortalidad PA: ' . $menu['insertados'] . ' por insertar/insertados, '
-            . $menu['existentes'] . ' ya existentes.';
+        $acciones[] = 'Menú Mortalidad PA: ' . $menu['insertados'] . ' insertados, '
+            . ($menu['actualizados'] ?? 0) . ' actualizados.';
 
-        // Pasos 4-6: roles, permisos y usuarios del bloque Mortalidad.
-        // El cod_rol se resuelve por nom_rol (fuente de verdad) y se reutiliza
-        // tal cual en el programa destino; nunca se hardcodea.
+        // Pasos 4-6: roles SISTEMAS / GESTINAVES (cod_rol) y alias por nom_rol.
         $codModsPa = pmig_menu_cod_mods();
+        $rolesObjetivo = pmig_roles_objetivo_resueltos($conn, $idProgPa, $idProgSanidad);
 
-        foreach (PMIG_ROLES_NOMBRES as $nomRol) {
-            $origen = pmig_rol_por_nombre($conn, $idProgSanidad, $nomRol);
+        foreach ($rolesObjetivo as $metaRol) {
+            $codRol = (string) $metaRol['cod_rol'];
+            $nomRol = (string) ($metaRol['nom_rol'] !== '' ? $metaRol['nom_rol'] : $codRol);
+
+            $origen = null;
+            if ((int) ($metaRol['id_sanidad'] ?? 0) > 0) {
+                $origen = [
+                    'id' => (int) $metaRol['id_sanidad'],
+                    'cod_rol' => $codRol,
+                    'nom_rol' => $nomRol,
+                ];
+            } else {
+                $origen = pmig_rol_por_cod($conn, $idProgSanidad, $codRol)
+                    ?? pmig_rol_por_nombre($conn, $idProgSanidad, $nomRol);
+            }
             if ($origen === null) {
-                $acciones[] = 'AVISO: no existe el rol «' . $nomRol . '» en «' . PMIG_NOMBRE_PROGRAMA_SANIDAD
-                    . '»; se omite.';
+                $acciones[] = 'AVISO: rol cod_rol=' . $codRol . ' no encontrado en Sanidad; se omite migración de usuarios.';
                 continue;
             }
-            $codRol = $origen['cod_rol'];
-            $acciones[] = 'Rol «' . $nomRol . '» resuelto en Sanidad: cod_rol=' . $codRol
-                . ' (id=' . $origen['id'] . ').';
+            $acciones[] = 'Rol «' . $nomRol . '» (cod_rol=' . $codRol . ') id Sanidad=' . (int) $origen['id'] . '.';
 
-            $modsOrigen = pmig_permisos_mortalidad_rol($conn, $origen['id'], $idProgSanidad);
+            $modsOrigen = pmig_permisos_mortalidad_rol($conn, (int) $origen['id'], $idProgSanidad);
             $modsOrigenPa = array_map('pmig_map_cod_mod', $modsOrigen);
 
-            $r = pmig_asegurar_rol($conn, $idProgPa, $codRol, $origen['nom_rol'], $ejecutar);
+            $r = pmig_asegurar_rol($conn, $idProgPa, $codRol, $nomRol, $ejecutar);
             $acciones[] = $r['mensaje'];
             if (!$r['ok']) {
                 throw new RuntimeException($r['mensaje']);
@@ -1071,8 +1265,18 @@ if (!$conn) {
             $idRolPa = (int) $r['id'];
 
             $perm = pmig_asegurar_permisos($conn, $idRolPa, $idProgPa, $codModsPa, $ejecutar);
-            $acciones[] = 'Permisos rol ' . $codRol . ': ' . $perm['insertados'] . ' por otorgar/otorgados, '
+            $acciones[] = 'Permisos PA rol ' . $codRol . ': ' . $perm['insertados'] . ' por otorgar/otorgados, '
                 . $perm['existentes'] . ' ya existentes.';
+
+            $permSanDesp = pmig_asegurar_permisos(
+                $conn,
+                (int) $origen['id'],
+                $idProgSanidad,
+                pmig_cod_mods_sanidad_despacho(),
+                $ejecutar
+            );
+            $acciones[] = 'Permisos Sanidad (Despacho) rol ' . $codRol . ': ' . $permSanDesp['insertados']
+                . ' nuevos, ' . $permSanDesp['existentes'] . ' ya existían.';
 
             $usuarios = pmig_usuarios_con_rol($conn, $idProgSanidad, $codRol);
             $asig = pmig_asignar_usuarios($conn, $codRol, array_column($usuarios, 'codigo'), $ejecutar);
@@ -1084,8 +1288,8 @@ if (!$conn) {
 
             $detalleRoles[] = [
                 'cod_rol' => $codRol,
-                'nom_rol' => $origen['nom_rol'],
-                'id_rol_sanidad' => $origen['id'],
+                'nom_rol' => $nomRol,
+                'id_rol_sanidad' => (int) $origen['id'],
                 'id_rol_pa' => $idRolPa,
                 'mods_origen' => $modsOrigen,
                 'mods_origen_pa' => $modsOrigenPa,
@@ -1169,9 +1373,13 @@ if ($esCli) {
     <p style="color:#64748b;">
         <?= $ejecutar ? 'Modo <strong>ejecución</strong>.' : 'Modo <strong>simulación</strong> (sin cambios en BD).' ?>
         Se crea un <code>id_programa</code> nuevo y se migran solo los permisos del
-        bloque <strong>Mortalidad</strong> de los roles
-        <?= pmig_esc(implode(' y ', PMIG_ROLES_NOMBRES)) ?>.
-        El <code>cod_rol</code> se resuelve dinámicamente por <code>nom_rol</code>.
+        bloque <strong>Mortalidad</strong> de los roles con
+        <code>cod_rol</code> <?= pmig_esc(implode(', ', PMIG_ROLES_COD_OBJETIVO)) ?>
+        (o <code>nom_rol</code> <?= pmig_esc(implode(' / ', PMIG_ROLES_NOMBRES)) ?>).
+    </p>
+    <p style="color:#64748b;">
+        Para actualizar menú y permisos tras un despliegue (p. ej. módulo Despacho), use
+        <a href="sync_acl_mortalidad_pa.php">sync_acl_mortalidad_pa.php</a>.
     </p>
     <?php if ($errorFatal !== ''): ?>
         <p style="padding:.75rem 1rem;background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;color:#991b1b;">
