@@ -1338,3 +1338,132 @@ function mort_despacho_analisis_completo(mysqli $conn, array $filtros): array
         'resumenGranjas' => $principal['resumenGranjas'],
     ];
 }
+
+/**
+ * Texto SQL que ejecuta el análisis (para EXPLAIN en MySQL; no ejecuta las consultas).
+ *
+ * @param array<string, mixed> $filtros
+ * @return array<string, mixed>
+ */
+function mort_despacho_export_sql_preview(mysqli $conn, array $filtros): array
+{
+    $t = MORT_DESPACHO_TEMP_KEYS;
+    $causasDespacho = "('05','14','15','17','18','19')";
+    $sqlDesp = mort_despacho_sql_es_despacho('mz');
+
+    $condsS700 = [];
+    mort_despacho_append_where_s700_index($conn, $filtros, 'mz', $condsS700);
+    $whereS700 = implode("\n  AND ", $condsS700);
+
+    $sqlClavesS700 = "
+INSERT INTO `{$t}` (fecha, cenco6, tcencos, galpon, venta_macho, venta_hembra)
+SELECT
+    DATE(mz.tfectra) AS fecha,
+    CONCAT(LPAD(LEFT(TRIM(mz.tcencos), 3), 3, '0'), LPAD(RIGHT(TRIM(mz.tcencos), 3), 3, '0')) AS cenco6,
+    TRIM(mz.tcencos) AS tcencos,
+    TRIM(CAST(mz.tcodint AS CHAR)) AS galpon,
+    COALESCE(SUM(CASE WHEN TRIM(mz.tcodigo) = 'P0001001' THEN mz.tcantid ELSE 0 END), 0) AS venta_macho,
+    COALESCE(SUM(CASE WHEN TRIM(mz.tcodigo) = 'P0001002' THEN mz.tcantid ELSE 0 END), 0) AS venta_hembra
+FROM movi_zonas mz
+WHERE {$whereS700}
+GROUP BY
+    DATE(mz.tfectra),
+    CONCAT(LPAD(LEFT(TRIM(mz.tcencos), 3), 3, '0'), LPAD(RIGHT(TRIM(mz.tcencos), 3), 3, '0')),
+    TRIM(mz.tcencos),
+    TRIM(CAST(mz.tcodint AS CHAR))
+HAVING (COALESCE(SUM(CASE WHEN TRIM(mz.tcodigo) = 'P0001001' THEN mz.tcantid ELSE 0 END), 0)
+      + COALESCE(SUM(CASE WHEN TRIM(mz.tcodigo) = 'P0001002' THEN mz.tcantid ELSE 0 END), 0)) > 0";
+
+    $sqlResumenS808 = "
+SELECT k.fecha, LEFT(k.cenco6, 3) AS granja, RIGHT(k.cenco6, 3) AS campania, k.galpon,
+       (k.venta_macho + k.venta_hembra) AS venta, /* + mort_desp_macho/hembra agregados */
+       ...
+FROM `{$t}` k
+LEFT JOIN movi_zonas mz ON
+    mz.tcodtra = 'S808'
+    AND mz.tcodigo IN ('P0001001','P0001002')
+    AND mz.tfectra >= k.fecha
+    AND mz.tfectra < DATE_ADD(k.fecha, INTERVAL 1 DAY)
+    AND TRIM(mz.tcencos) = k.tcencos
+    AND TRIM(CAST(mz.tcodint AS CHAR)) = k.galpon
+GROUP BY k.fecha, k.cenco6, k.galpon, k.venta_macho, k.venta_hembra, k.tcencos";
+
+    $sqlCausas = "
+SELECT LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0') AS cod_mort,
+       COALESCE(SUM(mz.tcantid), 0) AS cantidad
+FROM `{$t}` k
+INNER JOIN movi_zonas mz ON
+    mz.tcodtra = 'S808'
+    AND mz.tcodigo IN ('P0001001','P0001002')
+    AND mz.tfectra >= k.fecha
+    AND mz.tfectra < DATE_ADD(k.fecha, INTERVAL 1 DAY)
+    AND TRIM(mz.tcencos) = k.tcencos
+    AND TRIM(CAST(mz.tcodint AS CHAR)) = k.galpon
+WHERE mz.tcantid > 0
+  AND {$sqlDesp}
+  AND ((mz.tcodigo = 'P0001001' AND k.venta_macho > 0) OR (mz.tcodigo = 'P0001002' AND k.venta_hembra > 0))
+GROUP BY LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0')";
+
+    $rango = mort_ventas_rango($filtros);
+    $condsEtapas = ["c.tipoMortalidad = 'despacho'"];
+    if ($rango !== null) {
+        $desde = mort_despacho_sql_esc($conn, $rango['desde']);
+        $hasta = mort_despacho_sql_esc($conn, $rango['hasta']);
+        $condsEtapas[] = "c.fechaRegistro BETWEEN '{$desde}' AND '{$hasta}'";
+    }
+    $listaCencos = $filtros['cencos_list'] ?? [];
+    if (is_array($listaCencos) && $listaCencos !== []) {
+        $ins = [];
+        foreach ($listaCencos as $c) {
+            $c = trim((string) $c);
+            if (preg_match('/^\d{6}$/', $c)) {
+                $ins[] = "'" . mort_despacho_sql_esc($conn, $c) . "'";
+            }
+        }
+        if ($ins !== []) {
+            $condsEtapas[] = 'CONCAT(TRIM(c.granja), TRIM(c.campania)) IN (' . implode(',', $ins) . ')';
+        }
+    }
+    $whereEtapas = implode("\n  AND ", $condsEtapas);
+    $colsDisp = mort_despacho_etapas_display();
+    $selectSum = [];
+    foreach ($colsDisp as $d) {
+        $selectSum[] = 'COALESCE(SUM(d.' . $d['col'] . '), 0) AS ' . $d['col'];
+    }
+
+    $sqlEtapas = '
+SELECT ' . implode(', ', $selectSum) . "
+FROM san_fact_mortalidad_det d
+INNER JOIN san_fact_mortalidad_cab c ON c.id = d.cabId
+INNER JOIN `{$t}` k ON
+    k.fecha = c.fechaRegistro
+    AND k.cenco6 = CONCAT(LPAD(TRIM(c.granja), 3, '0'), LPAD(TRIM(c.campania), 3, '0'))
+    AND TRIM(c.galpon) = k.galpon
+WHERE {$whereEtapas}
+  AND ((d.sexo = 'M' AND k.venta_macho > 0) OR (d.sexo = 'H' AND k.venta_hembra > 0))";
+
+    return [
+        'libRev' => defined('MORT_DESPACHO_LIB_REV') ? MORT_DESPACHO_LIB_REV : null,
+        'rango' => $rango,
+        'filtros_parseados' => [
+            'periodoTipo' => $filtros['periodoTipo'] ?? '',
+            'cencos_list' => $filtros['cencos_list'] ?? [],
+        ],
+        'nota' => 'Ejecutar en orden. Paso 1 requiere CREATE TEMPORARY TABLE mort_dsp_vkeys (ver código). Paso 2 es el más pesado (S700 en movi_zonas).',
+        'sql' => [
+            '0_create_temp' => "CREATE TEMPORARY TABLE `{$t}` (
+  fecha DATE NOT NULL, cenco6 CHAR(6) NOT NULL, tcencos VARCHAR(32) NOT NULL,
+  galpon VARCHAR(24) NOT NULL, venta_macho DECIMAL(18,4) NOT NULL DEFAULT 0,
+  venta_hembra DECIMAL(18,4) NOT NULL DEFAULT 0,
+  PRIMARY KEY (fecha, cenco6, galpon)
+) ENGINE=MEMORY;",
+            '1_claves_venta_s700' => trim($sqlClavesS700),
+            '2_resumen_mortalidad_s808' => trim($sqlResumenS808),
+            '3_causas_s808' => trim($sqlCausas),
+            '4_etapas_san_fact' => trim($sqlEtapas),
+            '5_nombres_granja' => "SELECT TRIM(codigo) AS codigo, TRIM(nombre) AS nombre FROM ccos WHERE codigo IN ('601000', ...); -- solo granjas del resumen",
+        ],
+        'condicion_es_despacho' => $sqlDesp,
+        'codigos_causa_despacho' => $causasDespacho,
+    ];
+}
