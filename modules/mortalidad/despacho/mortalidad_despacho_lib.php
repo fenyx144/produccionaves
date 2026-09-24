@@ -12,7 +12,10 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../ventas/mortalidad_ventas_lib.php';
 require_once __DIR__ . '/../../../core/lib/gri/mortalidad_fact_aux_lib.php';
-require_once __DIR__ . '/../../../core/lib/hc/hc_granjas_repository.php';
+$hcRepoPath = __DIR__ . '/../../../core/lib/hc/hc_granjas_repository.php';
+if (is_file($hcRepoPath)) {
+    require_once $hcRepoPath;
+}
 
 if (!function_exists('mort_despacho_filtros_defecto')) {
     /**
@@ -467,7 +470,9 @@ function mort_despacho_catalogo_desde_lista_cencos(array $filtros): array
             'campania' => substr($c, 3, 3),
         ];
     }
-    usort($out, static fn ($a, $b) => strcmp($a['cencos'], $b['cencos']));
+    usort($out, static function ($a, $b) {
+        return strcmp($a['cencos'], $b['cencos']);
+    });
 
     return $out;
 }

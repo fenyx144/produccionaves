@@ -14,7 +14,23 @@ if (empty($_SESSION['active'])) {
 }
 
 require_once __DIR__ . '/mortalidad_despacho_lib.php';
-include_once __DIR__ . '/../../../../conexion_grs/conexion.php';
+
+$conexionPath = null;
+foreach ([
+    __DIR__ . '/../../../../conexion_grs/conexion.php',
+    __DIR__ . '/../../../conexion_grs/conexion.php',
+] as $candidate) {
+    if (is_file($candidate)) {
+        $conexionPath = $candidate;
+        break;
+    }
+}
+if ($conexionPath === null) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'No se encontró conexion_grs/conexion.php']);
+    exit;
+}
+require_once $conexionPath;
 
 $conn = conectar_joya_mysqli();
 if (!$conn) {
