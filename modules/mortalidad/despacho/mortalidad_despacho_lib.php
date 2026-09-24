@@ -4,7 +4,13 @@ declare(strict_types=1);
 
 /** Revisión desplegable (health / JSON libRev). Compatible PHP >= 7.2. */
 if (!defined('MORT_DESPACHO_LIB_REV')) {
-    define('MORT_DESPACHO_LIB_REV', '20260924d');
+    define('MORT_DESPACHO_LIB_REV', '20260924e');
+}
+
+/** Escapa valor SQL (PHP 7.2: mysqli_real_escape_string exige string; claves numéricas de granja pueden ser int). */
+function mort_despacho_sql_esc(mysqli $conn, $value): string
+{
+    return mysqli_real_escape_string($conn, (string) $value);
 }
 
 /**
@@ -51,7 +57,7 @@ function mort_despacho_parse_filtros(array $input): array
 {
     $f = mort_despacho_filtros_defecto();
     foreach (array_keys($f) as $k) {
-        if (!array_key_exists($k, $input)) {
+        if ($k === 'cencos_list' || !array_key_exists($k, $input)) {
             continue;
         }
         $f[$k] = trim((string) $input[$k]);
@@ -96,7 +102,7 @@ function mort_despacho_append_filtro_cencos(mysqli $conn, array $filtros, string
     foreach ($lista as $c) {
         $c = trim((string) $c);
         if (preg_match('/^\d{6}$/', $c)) {
-            $ins[] = "'" . mysqli_real_escape_string($conn, $c) . "'";
+            $ins[] = "'" . mort_despacho_sql_esc($conn, $c) . "'";
         }
     }
     if ($ins !== []) {
@@ -169,8 +175,8 @@ function mort_despacho_where_base_movimientos(mysqli $conn, array $filtros, stri
 
     $rango = mort_ventas_rango($filtros);
     if ($rango !== null) {
-        $desde = mysqli_real_escape_string($conn, $rango['desde']);
-        $hasta = mysqli_real_escape_string($conn, $rango['hasta']);
+        $desde = mort_despacho_sql_esc($conn, $rango['desde']);
+        $hasta = mort_despacho_sql_esc($conn, $rango['hasta']);
         $conds[] = "DATE({$a}.tfectra) BETWEEN '{$desde}' AND '{$hasta}'";
     }
 
@@ -180,13 +186,13 @@ function mort_despacho_where_base_movimientos(mysqli $conn, array $filtros, stri
     } else {
         $granja = trim((string) ($filtros['granja'] ?? ''));
         if ($granja !== '') {
-            $gEsc = mysqli_real_escape_string($conn, $granja);
+            $gEsc = mort_despacho_sql_esc($conn, $granja);
             $conds[] = "LEFT(TRIM({$a}.tcencos), 3) = '{$gEsc}'";
         }
 
         $campania = trim((string) ($filtros['campania'] ?? ''));
         if ($campania !== '') {
-            $cEsc = mysqli_real_escape_string($conn, $campania);
+            $cEsc = mort_despacho_sql_esc($conn, $campania);
             $conds[] = "RIGHT(TRIM({$a}.tcencos), 3) = '{$cEsc}'";
         }
     }
@@ -332,18 +338,18 @@ function mort_despacho_consultar_etapas(mysqli $conn, array $filtros): array
     $rango = mort_ventas_rango($filtros);
     $conds = ["c.tipoMortalidad = 'despacho'"];
     if ($rango !== null) {
-        $desde = mysqli_real_escape_string($conn, $rango['desde']);
-        $hasta = mysqli_real_escape_string($conn, $rango['hasta']);
+        $desde = mort_despacho_sql_esc($conn, $rango['desde']);
+        $hasta = mort_despacho_sql_esc($conn, $rango['hasta']);
         $conds[] = "c.fechaRegistro BETWEEN '{$desde}' AND '{$hasta}'";
     }
     $granja = trim((string) ($filtros['granja'] ?? ''));
     if ($granja !== '') {
-        $gEsc = mysqli_real_escape_string($conn, $granja);
+        $gEsc = mort_despacho_sql_esc($conn, $granja);
         $conds[] = "c.granja = '{$gEsc}'";
     }
     $campania = trim((string) ($filtros['campania'] ?? ''));
     if ($campania !== '') {
-        $cEsc = mysqli_real_escape_string($conn, $campania);
+        $cEsc = mort_despacho_sql_esc($conn, $campania);
         $conds[] = "c.campania = '{$cEsc}'";
     }
 
@@ -501,7 +507,7 @@ function mort_despacho_catalogo_cencos_dia_completo(mysqli $conn, array $filtros
         if ($granjaFiltro !== '' && $g3 !== $granjaFiltro) {
             continue;
         }
-        $granjasPermitidas[$g3] = true;
+        $granjasPermitidas[str_pad($g3, 3, '0', STR_PAD_LEFT)] = true;
     }
     if ($granjasPermitidas === []) {
         return [];
@@ -509,7 +515,7 @@ function mort_despacho_catalogo_cencos_dia_completo(mysqli $conn, array $filtros
 
     $inGranjas = [];
     foreach (array_keys($granjasPermitidas) as $g3) {
-        $inGranjas[] = "'" . mysqli_real_escape_string($conn, $g3) . "'";
+        $inGranjas[] = "'" . mort_despacho_sql_esc($conn, $g3) . "'";
     }
 
     $conds = [
@@ -519,7 +525,7 @@ function mort_despacho_catalogo_cencos_dia_completo(mysqli $conn, array $filtros
         'LEFT(TRIM(g.tcencos), 3) IN (' . implode(',', $inGranjas) . ')',
     ];
     if ($campaniaFiltro !== '') {
-        $cEsc = mysqli_real_escape_string($conn, $campaniaFiltro);
+        $cEsc = mort_despacho_sql_esc($conn, $campaniaFiltro);
         $conds[] = "RIGHT(TRIM(g.tcencos), 3) = '{$cEsc}'";
     }
 
