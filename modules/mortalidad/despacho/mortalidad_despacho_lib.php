@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /** Revisión desplegable (health / JSON libRev). Compatible PHP >= 7.2. */
 if (!defined('MORT_DESPACHO_LIB_REV')) {
-    define('MORT_DESPACHO_LIB_REV', '20260925o');
+    define('MORT_DESPACHO_LIB_REV', '20260925p');
 }
 
 if (!defined('MORT_DESPACHO_MAX_KEYS_VENTA')) {
@@ -12,7 +12,6 @@ if (!defined('MORT_DESPACHO_MAX_KEYS_VENTA')) {
 }
 
 require_once __DIR__ . '/../ventas/mortalidad_ventas_lib.php';
-require_once __DIR__ . '/../listado/mortalidad_listado_lib.php';
 
 /** Tiempo máximo PHP/BD por petición de análisis (evita bloquear el servidor compartido). */
 if (!defined('MORT_DESPACHO_QUERY_TIME_SEC')) {
@@ -744,10 +743,14 @@ function mort_despacho_codigos_causa_listado_sql_in(): string
     return '(' . implode(',', $quoted) . ')';
 }
 
-/** @return list<string> */
+/** @return list<string> Motivos despacho (get_motivos_listado.php); fallback si listado aún no desplegado. */
 function mort_despacho_codigos_causa_listado_list(): array
 {
-    return mort_listado_codigos_motivo_despacho();
+    if (function_exists('mort_listado_codigos_motivo_despacho')) {
+        return mort_listado_codigos_motivo_despacho();
+    }
+
+    return ['14', '17', '18', '19'];
 }
 
 function mort_despacho_codigos_causa_sql_in(): string
