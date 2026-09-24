@@ -366,23 +366,19 @@
         return Math.round((Number(n) || 0) * 100) / 100;
     }
 
-    function htmlPanelCargando(texto) {
-        const t = texto || 'Cargando…';
-        return '<div class="mdp-panel-loading" role="status">' +
-            '<div class="mdp-spinner-ring" aria-hidden="true"></div>' +
-            '<span>' + escapeHtml(t) + '</span></div>';
-    }
-
     function setIndicadorCargaMdp(activo, mensaje) {
+        const $root = $('#mdp-resultados');
         const $ov = $('#mdp-loading-overlay');
         const $btn = $('#mdp-btn-consultar');
         if (activo) {
             if (mensaje) {
                 $('#mdp-loading-text').text(mensaje);
             }
+            $root.addClass('mdp-resultados--busy');
             $ov.removeClass('lay-hidden').attr('aria-busy', 'true');
-            $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Buscando…');
+            $btn.prop('disabled', true);
         } else {
+            $root.removeClass('mdp-resultados--busy');
             $ov.addClass('lay-hidden').attr('aria-busy', 'false');
             $('#mdp-loading-text').text('Cargando análisis…');
             $btn.prop('disabled', false).html(mdpBtnConsultarHtml);
@@ -415,10 +411,6 @@
         cargando = true;
         const params = leerFiltrosFormulario();
         setIndicadorCargaMdp(true, 'Cargando análisis…');
-
-        $('#mdp-tabla-resumen').html(htmlPanelCargando('Cargando resumen…'));
-        $('#mdp-tabla-causas').html(htmlPanelCargando('Cargando causas…'));
-        $('#mdp-tabla-etapas').html(htmlPanelCargando('Cargando etapas…'));
 
         let rangoTexto = '';
         let pendientes = 2;
