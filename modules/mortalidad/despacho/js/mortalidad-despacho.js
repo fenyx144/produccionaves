@@ -151,10 +151,28 @@
         p.set('mesFin', f.mesFin || '');
     }
 
+    function asegurarPeriodoCompleto(f) {
+        const t = (f.periodoTipo || '').trim();
+        if (t === 'POR_MES' && !(f.mesUnico || '').trim()) {
+            const hoy = new Date();
+            const y = hoy.getFullYear();
+            const m = String(hoy.getMonth() + 1).padStart(2, '0');
+            f.mesUnico = y + '-' + m;
+        }
+        if (t === 'ENTRE_FECHAS') {
+            if (!(f.fechaInicio || '').trim() || !(f.fechaFin || '').trim()) {
+                const r = rangoMesActualYmd();
+                f.fechaInicio = r.desde;
+                f.fechaFin = r.hasta;
+            }
+        }
+        return f;
+    }
+
     function leerFiltrosFormulario() {
         const base = leerParametrosPeriodoDashboard();
         base.cencos = selCodes.join(',');
-        return base;
+        return asegurarPeriodoCompleto(base);
     }
 
     function rangoMesActualYmd() {
@@ -352,7 +370,13 @@
         cargando = true;
         $('#mdp-btn-consultar').prop('disabled', true);
         const params = leerFiltrosFormulario();
-        $.getJSON(cfg.apiUrl, params)
+        $.ajax({
+            url: cfg.apiUrl,
+            data: params,
+            dataType: 'json',
+            timeout: 120000,
+            cache: false
+        })
             .done(function (j) {
                 if (!j || !j.success) {
                     Swal.fire({ icon: 'error', title: 'Error', text: (j && j.message) || 'No se pudo cargar el análisis.' });
@@ -363,8 +387,11 @@
                 pintarEtapas(j.etapas, rangoTexto);
                 pintarResumen(j.resumenGranjas || [], rangoTexto);
             })
-            .fail(function () {
-                Swal.fire({ icon: 'error', title: 'Error', text: 'Fallo la consulta al servidor.' });
+            .fail(function (_xhr, status) {
+                const msg = status === 'timeout'
+                    ? 'La consulta tardó demasiado. Acote granjas o periodo e intente de nuevo.'
+                    : 'Fallo la consulta al servidor.';
+                Swal.fire({ icon: 'error', title: 'Error', text: msg });
             })
             .always(function () {
                 cargando = false;

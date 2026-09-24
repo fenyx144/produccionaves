@@ -184,9 +184,9 @@ function mort_ventas_where_internos(mysqli $conn, array $filtros): string
 
     $rango = mort_ventas_rango($filtros);
     if ($rango !== null) {
-        $desde = mysqli_real_escape_string($conn, $rango['desde']);
+        $desde = mysqli_real_escape_string($conn, $rango['desde'] . ' 00:00:00');
         $hasta = mysqli_real_escape_string($conn, $rango['hasta']);
-        $conds[] = "DATE(mz.tfectra) BETWEEN '{$desde}' AND '{$hasta}'";
+        $conds[] = "mz.tfectra >= '{$desde}' AND mz.tfectra < DATE_ADD('{$hasta}', INTERVAL 1 DAY)";
     }
 
     $granja = trim((string) ($filtros['granja'] ?? ''));
