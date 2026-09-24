@@ -218,7 +218,7 @@ $anio = date('Y');
     </div>
 
     <div class="tabla-listado-wrapper bg-white rounded-xl shadow-md p-5 mb-4 mdp-tabla-wrap">
-        <h4 class="mdp-panel-title">Resumen de mortalidad por granja</h4>
+        <h4 class="mdp-panel-title" id="mdp-titulo-resumen">Resumen de mortalidad por granja</h4>
         <div class="table-wrapper" id="mdp-tabla-resumen">
             <p class="mdp-empty">Use Buscar para cargar el resumen.</p>
         </div>

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /** Revisión desplegable (health / JSON libRev). Compatible PHP >= 7.2. */
 if (!defined('MORT_DESPACHO_LIB_REV')) {
-    define('MORT_DESPACHO_LIB_REV', '20260924e');
+    define('MORT_DESPACHO_LIB_REV', '20260924f');
 }
 
 /** Escapa valor SQL (PHP 7.2: mysqli_real_escape_string exige string; claves numéricas de granja pueden ser int). */
@@ -620,40 +620,48 @@ function mort_despacho_catalogo_cencos(mysqli $conn, array $filtros, ?array $ran
 }
 
 /**
- * Estadísticas despacho por fecha + cenco (sin filtrar filas en cero).
+ * Filtro extra sobre el subquery de ventas (lista de cencos de 6 dígitos).
+ */
+function mort_despacho_sql_filtro_cencos_en_x(mysqli $conn, array $filtros): string
+{
+    $lista = $filtros['cencos_list'] ?? [];
+    if (!is_array($lista) || $lista === []) {
+        return '';
+    }
+    $ins = [];
+    foreach ($lista as $c) {
+        $c = trim((string) $c);
+        if (preg_match('/^\d{6}$/', $c)) {
+            $ins[] = "'" . mort_despacho_sql_esc($conn, $c) . "'";
+        }
+    }
+    if ($ins === []) {
+        return '';
+    }
+
+    return ' AND CONCAT(x.granja, x.campania) IN (' . implode(',', $ins) . ')';
+}
+
+/**
+ * Estadísticas por fecha + cenco: misma base que Ventas (S700 = cant. despachada,
+ * mortalidad de despacho solo si hubo venta del sexo ese día), agregado por granja+campaña.
  *
- * @return array<string, array{cantidad: float, muertos: int}>
+ * @return array<string, array{cantidadDespachada: float, muertos: int}>
  */
 function mort_despacho_resumen_stats_map(mysqli $conn, array $filtros): array
 {
-    $where = mort_despacho_where_base_movimientos($conn, $filtros, 'mz');
-    $sqlDesp = mort_despacho_sql_es_despacho('mz');
-    $subVenta = mort_despacho_sql_venta_dia_galpon($conn, $filtros);
+    $inner = mort_ventas_sql_agrupada($conn, $filtros);
+    $filtroCencos = mort_despacho_sql_filtro_cencos_en_x($conn, $filtros);
 
     $sql = "
     SELECT
-        DATE(mz.tfectra) AS fecha,
-        TRIM(mz.tcencos) AS cencos,
-        COALESCE(SUM(CASE WHEN TRIM(mz.tcodtra) = 'S700' THEN mz.tcantid ELSE 0 END), 0) AS cantidad_despachada,
-        COALESCE(SUM(
-            CASE
-                WHEN TRIM(mz.tcodtra) = 'S808'
-                     AND {$sqlDesp}
-                     AND (
-                           (TRIM(mz.tcodigo) = 'P0001001' AND COALESCE(v.venta_m, 0) > 0)
-                        OR (TRIM(mz.tcodigo) = 'P0001002' AND COALESCE(v.venta_h, 0) > 0)
-                     )
-                THEN mz.tcantid
-                ELSE 0
-            END
-        ), 0) AS muertos
-    FROM movi_zonas mz
-    LEFT JOIN ({$subVenta}) v
-        ON v.fecha = DATE(mz.tfectra)
-       AND v.cencos = TRIM(mz.tcencos)
-       AND v.galpon = TRIM(CAST(mz.tcodint AS CHAR))
-    WHERE {$where}
-    GROUP BY DATE(mz.tfectra), TRIM(mz.tcencos)
+        x.fecha,
+        CONCAT(x.granja, x.campania) AS cencos,
+        COALESCE(SUM(x.venta), 0) AS cantidad_despachada,
+        COALESCE(SUM(x.mort_desp_macho + x.mort_desp_hembra), 0) AS muertos
+    FROM ({$inner}) x
+    WHERE 1=1 {$filtroCencos}
+    GROUP BY x.fecha, x.granja, x.campania
     ";
 
     $map = [];
@@ -669,7 +677,7 @@ function mort_despacho_resumen_stats_map(mysqli $conn, array $filtros): array
         }
         $c6 = strlen($cencos) >= 6 ? substr($cencos, 0, 3) . substr($cencos, -3) : $cencos;
         $map[$fecha . '|' . $c6] = [
-            'cantidad' => (float) ($row['cantidad_despachada'] ?? 0),
+            'cantidadDespachada' => (float) ($row['cantidad_despachada'] ?? 0),
             'muertos' => (int) ($row['muertos'] ?? 0),
         ];
     }
@@ -712,10 +720,10 @@ function mort_despacho_consultar_resumen_granjas(mysqli $conn, array $filtros): 
             $granja = $cat['granja'];
             $campania = $cat['campania'];
             $key = $fecha . '|' . $cencos;
-            $st = $stats[$key] ?? ['cantidad' => 0.0, 'muertos' => 0];
-            $cant = (float) $st['cantidad'];
-            $muertos = (int) $st['muertos'];
-            $pct = $cant > 0 ? round($muertos * 100 / $cant, 2) : 0.0;
+            $st = $stats[$key] ?? ['cantidadDespachada' => 0.0, 'muertos' => 0];
+            $cantDesp = (float) ($st['cantidadDespachada'] ?? 0);
+            $muertos = (int) ($st['muertos'] ?? 0);
+            $pct = $cantDesp > 0 ? round($muertos * 100 / $cantDesp, 2) : 0.0;
             $nomBase = $nombres[$granja] ?? '';
             $granjaLabel = $nomBase !== ''
                 ? $nomBase . ' C=' . $campania
@@ -728,9 +736,9 @@ function mort_despacho_consultar_resumen_granjas(mysqli $conn, array $filtros): 
                 'granja' => $granjaLabel,
                 'granjaCod' => $granja,
                 'campania' => $campania,
-                'cantidad' => $cant,
+                'cantidadDespachada' => $cantDesp,
                 'muertos' => $muertos,
-                'porcentaje' => $pct,
+                'porcentajeMortDespacho' => $pct,
             ];
         }
     }

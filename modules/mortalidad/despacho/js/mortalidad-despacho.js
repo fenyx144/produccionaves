@@ -244,25 +244,32 @@
         );
     }
 
-    function pintarResumen(filas) {
+    function pintarResumen(filas, rangoTexto) {
+        setTituloPanel('#mdp-titulo-resumen', 'Resumen de mortalidad por granja', rangoTexto);
         if (!filas || filas.length === 0) {
             $('#mdp-tabla-resumen').html('<p class="mdp-empty">Sin registros en el periodo.</p>');
             return;
         }
+        let sumDesp = 0;
+        let sumMuertos = 0;
         const rows = filas.map(function (r, idx) {
-            const cantNum = Number(r.cantidad) || 0;
+            const cantNum = Number(r.cantidadDespachada != null ? r.cantidadDespachada : r.cantidad) || 0;
             const muertosNum = Number(r.muertos) || 0;
+            const pctNum = Number(r.porcentajeMortDespacho != null ? r.porcentajeMortDespacho : r.porcentaje) || 0;
+            sumDesp += cantNum;
+            sumMuertos += muertosNum;
             return {
                 numero: idx + 1,
                 fecha: formatearFechaYMDslash(r.fecha),
                 cencos: r.cencos,
                 granja: r.granja,
-                cantidad: formatearNumero(cantNum, 2),
+                cantidadDespachada: formatearNumero(cantNum, 2),
                 muertos: muertosNum > 0 ? formatearNumero(muertosNum) : '-',
-                porcentaje: formatearNumero(r.porcentaje, 2) + '%',
+                porcentajeMortDespacho: formatearNumero(pctNum, 2) + '%',
                 _rowClass: cantNum <= 0 ? 'mdp-fila-sin-despacho' : ''
             };
         });
+        const pctTotal = sumDesp > 0 ? round2(sumMuertos * 100 / sumDesp) : 0;
         renderTablaSimple(
             '#mdp-tabla-resumen',
             [
@@ -270,18 +277,33 @@
                 { label: 'Fecha', render: function (f) { return f.fecha; } },
                 { label: 'Cencos', render: function (f) { return f.cencos; } },
                 { label: 'Granja', render: function (f) { return f.granja; } },
-                { label: 'Cantidad', thClass: 'col-qty', tdClass: 'col-qty', render: function (f) { return f.cantidad; } },
+                {
+                    label: 'Cant. despachada',
+                    thClass: 'col-qty',
+                    tdClass: 'col-qty',
+                    render: function (f) { return f.cantidadDespachada; }
+                },
                 { label: 'Muertos', thClass: 'col-qty', tdClass: 'col-qty', render: function (f) { return f.muertos; } },
                 {
-                    label: '% Mort. Despacho',
+                    label: 'Porcentaje de Mortalidad en Despacho',
                     thClass: 'col-pct',
                     tdClass: 'col-pct',
-                    render: function (f) { return f.porcentaje; }
+                    render: function (f) { return f.porcentajeMortDespacho; }
                 }
             ],
             rows,
-            null
+            function (_c, idx) {
+                if (idx === 1) return 'Total';
+                if (idx === 4) return formatearNumero(sumDesp, 2);
+                if (idx === 5) return sumMuertos > 0 ? formatearNumero(sumMuertos) : '-';
+                if (idx === 6) return formatearNumero(pctTotal, 2) + '%';
+                return '';
+            }
         );
+    }
+
+    function round2(n) {
+        return Math.round((Number(n) || 0) * 100) / 100;
     }
 
     function cargarAnalisis() {
@@ -298,7 +320,7 @@
                 const rangoTexto = tituloPeriodo(j.rango);
                 pintarCausas(j.causas, rangoTexto);
                 pintarEtapas(j.etapas, rangoTexto);
-                pintarResumen(j.resumenGranjas || []);
+                pintarResumen(j.resumenGranjas || [], rangoTexto);
             })
             .fail(function () {
                 Swal.fire({ icon: 'error', title: 'Error', text: 'Fallo la consulta al servidor.' });
