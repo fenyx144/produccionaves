@@ -13,6 +13,21 @@ DB_NAME="${JOYA_DB_NAME:-joya}"
 DB_USER="${JOYA_DB_USER:-joya}"
 DB_PASSWORD="${JOYA_DB_PASSWORD:-joya}"
 
+echo ">> [0/4] Paquetes de sistema (PHP, MariaDB, Composer) si faltan"
+if ! command -v php >/dev/null 2>&1 || ! command -v mariadbd >/dev/null 2>&1; then
+    export DEBIAN_FRONTEND=noninteractive
+    sudo apt-get update -y
+    sudo apt-get install -y --no-install-recommends \
+        php-cli php-mysql php-mbstring php-xml php-gd php-curl php-zip php-bcmath \
+        mariadb-server mariadb-client unzip curl ca-certificates
+fi
+if ! command -v composer >/dev/null 2>&1; then
+    TMP_COMPOSER="$(mktemp)"
+    curl -fsSL https://getcomposer.org/installer -o "$TMP_COMPOSER"
+    sudo php "$TMP_COMPOSER" --install-dir=/usr/local/bin --filename=composer
+    rm -f "$TMP_COMPOSER"
+fi
+
 echo ">> [1/4] Dependencias PHP (composer install)"
 composer install --no-interaction --no-progress
 
