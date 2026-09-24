@@ -8,6 +8,7 @@
     let campByGranja = {};
     let granjasMetaCache = null;
     let granjasMetaPromise = null;
+    const mdpBtnConsultarHtml = '<i class="fas fa-search"></i> Buscar';
 
     function escapeHtml(s) {
         return String(s ?? '')
@@ -365,6 +366,29 @@
         return Math.round((Number(n) || 0) * 100) / 100;
     }
 
+    function htmlPanelCargando(texto) {
+        const t = texto || 'Cargando…';
+        return '<div class="mdp-panel-loading" role="status">' +
+            '<div class="mdp-spinner-ring" aria-hidden="true"></div>' +
+            '<span>' + escapeHtml(t) + '</span></div>';
+    }
+
+    function setIndicadorCargaMdp(activo, mensaje) {
+        const $ov = $('#mdp-loading-overlay');
+        const $btn = $('#mdp-btn-consultar');
+        if (activo) {
+            if (mensaje) {
+                $('#mdp-loading-text').text(mensaje);
+            }
+            $ov.removeClass('lay-hidden').attr('aria-busy', 'true');
+            $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Buscando…');
+        } else {
+            $ov.addClass('lay-hidden').attr('aria-busy', 'false');
+            $('#mdp-loading-text').text('Cargando análisis…');
+            $btn.prop('disabled', false).html(mdpBtnConsultarHtml);
+        }
+    }
+
     function ajaxAnalisisBloque(params, bloque, timeoutMs) {
         const data = Object.assign({}, params, { bloque: bloque });
         return $.ajax({
@@ -389,12 +413,12 @@
     function cargarAnalisis() {
         if (cargando) return;
         cargando = true;
-        $('#mdp-btn-consultar').prop('disabled', true);
         const params = leerFiltrosFormulario();
+        setIndicadorCargaMdp(true, 'Cargando análisis…');
 
-        $('#mdp-tabla-resumen').html('<p class="mdp-empty">Cargando resumen…</p>');
-        $('#mdp-tabla-causas').html('<p class="mdp-empty">Cargando causas…</p>');
-        $('#mdp-tabla-etapas').html('<p class="mdp-empty">Cargando etapas…</p>');
+        $('#mdp-tabla-resumen').html(htmlPanelCargando('Cargando resumen…'));
+        $('#mdp-tabla-causas').html(htmlPanelCargando('Cargando causas…'));
+        $('#mdp-tabla-etapas').html(htmlPanelCargando('Cargando etapas…'));
 
         let rangoTexto = '';
         let pendientes = 2;
@@ -403,7 +427,7 @@
             pendientes -= 1;
             if (pendientes <= 0) {
                 cargando = false;
-                $('#mdp-btn-consultar').prop('disabled', false);
+                setIndicadorCargaMdp(false);
             }
         }
 

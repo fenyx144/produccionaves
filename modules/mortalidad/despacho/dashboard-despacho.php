@@ -90,6 +90,27 @@ $ultimoDiaMes = date('Y-m-t');
         .mdp-empty {
             text-align: center; color: #94a3b8; padding: 2rem 1rem; font-size: 0.875rem;
         }
+        .mdp-resultados { position: relative; }
+        .mdp-loading-overlay {
+            position: absolute; inset: 0; z-index: 30;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 0.75rem; min-height: 12rem;
+            background: rgba(255, 255, 255, 0.82);
+            border-radius: 0.75rem;
+            color: #475569; font-size: 0.875rem; font-weight: 600;
+        }
+        .mdp-loading-overlay.lay-hidden { display: none !important; }
+        .mdp-spinner-ring {
+            width: 46px; height: 46px; border-radius: 50%;
+            border: 4px solid rgba(30, 136, 229, 0.15); border-top-color: #1e88e5;
+            animation: mdp-spin 0.8s linear infinite;
+        }
+        @keyframes mdp-spin { to { transform: rotate(360deg); } }
+        .mdp-panel-loading {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 0.65rem; padding: 2.5rem 1rem; color: #64748b; font-size: 0.875rem;
+        }
+        .mdp-panel-loading .mdp-spinner-ring { width: 36px; height: 36px; border-width: 3px; }
         .selector-display input { cursor: pointer; background: #fff; }
         body.mrt-dsp-modal-granjas-open .tabla-listado-wrapper { filter: none; }
         #mrt-dsp-modal-granjas .gmc-modal-inner { max-width: 920px; }
@@ -187,25 +208,32 @@ $ultimoDiaMes = date('Y-m-t');
         </div>
     </div>
 
-    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
-        <div class="tabla-listado-wrapper bg-white rounded-xl shadow-md p-5 mdp-tabla-wrap">
-            <h4 class="mdp-panel-title" id="mdp-titulo-causas">Mortalidad por causa</h4>
-            <div class="table-wrapper" id="mdp-tabla-causas">
-                <p class="mdp-empty">Use Buscar para cargar el análisis (todas las granjas si no elige una).</p>
-            </div>
+    <div id="mdp-resultados" class="mdp-resultados">
+        <div id="mdp-loading-overlay" class="mdp-loading-overlay lay-hidden" role="status" aria-live="polite" aria-busy="false">
+            <div class="mdp-spinner-ring" aria-hidden="true"></div>
+            <span id="mdp-loading-text">Cargando análisis…</span>
         </div>
-        <div class="tabla-listado-wrapper bg-white rounded-xl shadow-md p-5 mdp-tabla-wrap">
-            <h4 class="mdp-panel-title" id="mdp-titulo-etapas">Mortalidad por etapa del proceso</h4>
-            <div class="table-wrapper" id="mdp-tabla-etapas">
-                <p class="mdp-empty">Use Buscar para cargar el análisis.</p>
-            </div>
-        </div>
-    </div>
 
-    <div class="tabla-listado-wrapper bg-white rounded-xl shadow-md p-5 mb-4 mdp-tabla-wrap">
-        <h4 class="mdp-panel-title" id="mdp-titulo-resumen">Resumen de mortalidad por granja</h4>
-        <div class="table-wrapper" id="mdp-tabla-resumen">
-            <p class="mdp-empty">Use Buscar para cargar el resumen.</p>
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
+            <div class="tabla-listado-wrapper bg-white rounded-xl shadow-md p-5 mdp-tabla-wrap">
+                <h4 class="mdp-panel-title" id="mdp-titulo-causas">Mortalidad por causa</h4>
+                <div class="table-wrapper" id="mdp-tabla-causas">
+                    <p class="mdp-empty">Use Buscar para cargar el análisis (todas las granjas si no elige una).</p>
+                </div>
+            </div>
+            <div class="tabla-listado-wrapper bg-white rounded-xl shadow-md p-5 mdp-tabla-wrap">
+                <h4 class="mdp-panel-title" id="mdp-titulo-etapas">Mortalidad por etapa del proceso</h4>
+                <div class="table-wrapper" id="mdp-tabla-etapas">
+                    <p class="mdp-empty">Use Buscar para cargar el análisis.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="tabla-listado-wrapper bg-white rounded-xl shadow-md p-5 mb-4 mdp-tabla-wrap">
+            <h4 class="mdp-panel-title" id="mdp-titulo-resumen">Resumen de mortalidad por granja</h4>
+            <div class="table-wrapper" id="mdp-tabla-resumen">
+                <p class="mdp-empty">Use Buscar para cargar el resumen.</p>
+            </div>
         </div>
     </div>
 </div>
