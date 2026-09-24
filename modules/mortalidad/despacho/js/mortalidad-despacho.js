@@ -50,7 +50,7 @@
         campByGranja = (st && st.campByGranja) ? JSON.parse(JSON.stringify(st.campByGranja)) : {};
     }
 
-    function leerFiltrosFormulario() {
+    function leerParametrosPeriodoDashboard() {
         return {
             periodoTipo: ($('#mdp-periodo-tipo').val() || 'POR_FECHA').trim(),
             fechaUnica: ($('#mdp-fecha-unica').val() || '').trim(),
@@ -58,9 +58,80 @@
             fechaFin: ($('#mdp-fecha-fin').val() || '').trim(),
             mesUnico: ($('#mdp-mes-unico').val() || '').trim(),
             mesInicio: ($('#mdp-mes-inicio').val() || '').trim(),
-            mesFin: ($('#mdp-mes-fin').val() || '').trim(),
-            cencos: selCodes.join(',')
+            mesFin: ($('#mdp-mes-fin').val() || '').trim()
         };
+    }
+
+    function ultimoDiaMes(ym) {
+        if (!ym || !/^\d{4}-\d{2}$/.test(ym)) return '';
+        const p = ym.split('-');
+        const y = parseInt(p[0], 10);
+        const m = parseInt(p[1], 10);
+        const d = new Date(y, m, 0);
+        return y + '-' + String(m).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+
+    function rangoYmdDesdePeriodoDashboard() {
+        const f = leerParametrosPeriodoDashboard();
+        const t = f.periodoTipo;
+        if (t === 'POR_FECHA' && f.fechaUnica) {
+            return { desde: f.fechaUnica, hasta: f.fechaUnica };
+        }
+        if (t === 'ENTRE_FECHAS' && f.fechaInicio && f.fechaFin) {
+            return { desde: f.fechaInicio, hasta: f.fechaFin };
+        }
+        if (t === 'POR_MES' && f.mesUnico) {
+            return { desde: f.mesUnico + '-01', hasta: ultimoDiaMes(f.mesUnico) };
+        }
+        if (t === 'ENTRE_MESES' && f.mesInicio && f.mesFin) {
+            return { desde: f.mesInicio + '-01', hasta: ultimoDiaMes(f.mesFin) };
+        }
+        if (t === 'ULTIMA_SEMANA') {
+            const hoy = new Date();
+            const fin = hoy.getFullYear() + '-' +
+                String(hoy.getMonth() + 1).padStart(2, '0') + '-' +
+                String(hoy.getDate()).padStart(2, '0');
+            const d0 = new Date(hoy.getTime());
+            d0.setDate(d0.getDate() - 6);
+            const desde = d0.getFullYear() + '-' +
+                String(d0.getMonth() + 1).padStart(2, '0') + '-' +
+                String(d0.getDate()).padStart(2, '0');
+            return { desde: desde, hasta: fin };
+        }
+        return { desde: '', hasta: '' };
+    }
+
+    /** Alinea el periodo del modal de campañas con los filtros del dashboard (consultas acotadas). */
+    function syncModalPeriodoDesdeDashboard() {
+        const r = rangoYmdDesdePeriodoDashboard();
+        if (!r.desde || !r.hasta) {
+            return;
+        }
+        const elDesde = document.getElementById('mrt-dsp-periodo-camp-desde');
+        const elHasta = document.getElementById('mrt-dsp-periodo-camp-hasta');
+        if (elDesde) {
+            elDesde.value = r.desde;
+        }
+        if (elHasta) {
+            elHasta.value = r.hasta;
+        }
+    }
+
+    function appendPeriodoDashboard(p) {
+        const f = leerParametrosPeriodoDashboard();
+        p.set('periodoTipo', f.periodoTipo || 'POR_FECHA');
+        p.set('fechaUnica', f.fechaUnica || '');
+        p.set('fechaInicio', f.fechaInicio || '');
+        p.set('fechaFin', f.fechaFin || '');
+        p.set('mesUnico', f.mesUnico || '');
+        p.set('mesInicio', f.mesInicio || '');
+        p.set('mesFin', f.mesFin || '');
+    }
+
+    function leerFiltrosFormulario() {
+        const base = leerParametrosPeriodoDashboard();
+        base.cencos = selCodes.join(',');
+        return base;
     }
 
     function syncVisibilidadPeriodo() {
@@ -282,10 +353,12 @@
         selCodes = [];
         campByGranja = {};
         syncVisibilidadPeriodo();
+        syncModalPeriodoDesdeDashboard();
         syncGranjaDisplay();
     }
 
     function getCampaniasUrl(codes) {
+        syncModalPeriodoDesdeDashboard();
         const list = (codes && codes.length)
             ? codes
             : (cfg.granjasMeta || []).map(function (g) { return g.granja || ''; }).filter(Boolean);
@@ -293,11 +366,7 @@
             return '';
         }
         const p = new URLSearchParams({ granjas: list.join(',') });
-        if (window.GmcPeriodoCampanias) {
-            window.GmcPeriodoCampanias.appendToSearchParams(p, 'mrt-dsp');
-        } else {
-            p.set('periodoTipo', 'TODOS');
-        }
+        appendPeriodoDashboard(p);
         const base = String(cfg.campaniasUrl || '');
         if (!base) {
             return '';
@@ -352,6 +421,7 @@
 
     $(function () {
         syncVisibilidadPeriodo();
+        syncModalPeriodoDesdeDashboard();
         syncGranjaDisplay();
         initMrtDspGmc();
 
@@ -360,7 +430,12 @@
             $('#iconoFiltrosMdp').toggleClass('rotate-180');
         });
 
-        $('#mdp-periodo-tipo').on('change', syncVisibilidadPeriodo);
+        $('#mdp-periodo-tipo').on('change', function () {
+            syncVisibilidadPeriodo();
+            syncModalPeriodoDesdeDashboard();
+        });
+        $('#mdp-fecha-unica, #mdp-fecha-inicio, #mdp-fecha-fin, #mdp-mes-unico, #mdp-mes-inicio, #mdp-mes-fin')
+            .on('change', syncModalPeriodoDesdeDashboard);
         $('#mdp-btn-consultar').on('click', cargarAnalisis);
         $('#mdp-btn-limpiar').on('click', function () {
             limpiarFiltros();

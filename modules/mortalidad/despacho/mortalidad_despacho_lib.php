@@ -430,36 +430,58 @@ function mort_despacho_fechas_en_rango(?array $rango): array
 }
 
 /**
- * Catálogo de cencos (granja + campaña) para el resumen.
+ * @return list<array{granja: string, nombre: string, zona: string, subzona: string}>
+ */
+function mort_despacho_granjas_hc_cached(mysqli $conn): array
+{
+    static $cache = null;
+    if ($cache === null) {
+        $cache = function_exists('hc_granjas_listar_para_selector')
+            ? hc_granjas_listar_para_selector($conn)
+            : [];
+    }
+
+    return $cache;
+}
+
+/**
+ * Catálogo explícito desde filtro multi (cencos).
  *
  * @return list<array{cencos: string, granja: string, campania: string}>
  */
-function mort_despacho_catalogo_cencos(mysqli $conn, array $filtros): array
+function mort_despacho_catalogo_desde_lista_cencos(array $filtros): array
 {
     $lista = $filtros['cencos_list'] ?? [];
-    if (is_array($lista) && $lista !== []) {
-        $out = [];
-        foreach ($lista as $c) {
-            $c = trim((string) $c);
-            if (!preg_match('/^\d{6}$/', $c)) {
-                continue;
-            }
-            $out[] = [
-                'cencos' => $c,
-                'granja' => substr($c, 0, 3),
-                'campania' => substr($c, 3, 3),
-            ];
-        }
-        usort($out, static fn ($a, $b) => strcmp($a['cencos'], $b['cencos']));
-
-        return $out;
+    if (!is_array($lista) || $lista === []) {
+        return [];
     }
+    $out = [];
+    foreach ($lista as $c) {
+        $c = trim((string) $c);
+        if (!preg_match('/^\d{6}$/', $c)) {
+            continue;
+        }
+        $out[] = [
+            'cencos' => $c,
+            'granja' => substr($c, 0, 3),
+            'campania' => substr($c, 3, 3),
+        ];
+    }
+    usort($out, static fn ($a, $b) => strcmp($a['cencos'], $b['cencos']));
 
+    return $out;
+}
+
+/**
+ * Catálogo completo HC + campañas (solo para consulta de un día: todas las granjas con 0 % posible).
+ *
+ * @return list<array{cencos: string, granja: string, campania: string}>
+ */
+function mort_despacho_catalogo_cencos_dia_completo(mysqli $conn, array $filtros): array
+{
     $granjaFiltro = trim((string) ($filtros['granja'] ?? ''));
     $campaniaFiltro = trim((string) ($filtros['campania'] ?? ''));
-    $granjasHc = function_exists('hc_granjas_listar_para_selector')
-        ? hc_granjas_listar_para_selector($conn)
-        : [];
+    $granjasHc = mort_despacho_granjas_hc_cached($conn);
     $granjasPermitidas = [];
     foreach ($granjasHc as $row) {
         $g3 = trim((string) ($row['granja'] ?? ''));
@@ -518,6 +540,67 @@ function mort_despacho_catalogo_cencos(mysqli $conn, array $filtros): array
     }
 
     return $out;
+}
+
+/**
+ * Cencos con saca (S700) en el periodo ya filtrado — evita cruzar todo el catálogo en rangos largos.
+ *
+ * @return list<array{cencos: string, granja: string, campania: string}>
+ */
+function mort_despacho_catalogo_cencos_con_saca_periodo(mysqli $conn, array $filtros): array
+{
+    $where = mort_despacho_where_base_movimientos($conn, $filtros, 'mz');
+    $where .= " AND TRIM(mz.tcodtra) = 'S700' AND mz.tcantid > 0";
+
+    $sql = "
+    SELECT DISTINCT
+        TRIM(mz.tcencos) AS cencos,
+        LEFT(TRIM(mz.tcencos), 3) AS granja,
+        RIGHT(TRIM(mz.tcencos), 3) AS campania
+    FROM movi_zonas mz
+    WHERE {$where}
+    ORDER BY cencos ASC
+    ";
+
+    $res = mysqli_query($conn, $sql);
+    $out = [];
+    if ($res) {
+        while ($row = mysqli_fetch_assoc($res)) {
+            $cencos = trim((string) ($row['cencos'] ?? ''));
+            if ($cencos === '' || strlen($cencos) < 6) {
+                continue;
+            }
+            $c6 = substr($cencos, 0, 3) . substr($cencos, -3);
+            $out[] = [
+                'cencos' => $c6,
+                'granja' => trim((string) ($row['granja'] ?? substr($c6, 0, 3))),
+                'campania' => trim((string) ($row['campania'] ?? substr($c6, 3, 3))),
+            ];
+        }
+    }
+
+    return $out;
+}
+
+/**
+ * Catálogo de cencos según periodo: un día = todas las granjas; rango = solo con despacho en el periodo.
+ *
+ * @return list<array{cencos: string, granja: string, campania: string}>
+ */
+function mort_despacho_catalogo_cencos(mysqli $conn, array $filtros, ?array $rango = null): array
+{
+    $explicit = mort_despacho_catalogo_desde_lista_cencos($filtros);
+    if ($explicit !== []) {
+        return $explicit;
+    }
+
+    $rango = $rango ?? mort_ventas_rango($filtros);
+    $fechas = mort_despacho_fechas_en_rango($rango);
+    if (count($fechas) === 1) {
+        return mort_despacho_catalogo_cencos_dia_completo($conn, $filtros);
+    }
+
+    return mort_despacho_catalogo_cencos_con_saca_periodo($conn, $filtros);
 }
 
 /**
@@ -590,12 +673,11 @@ function mort_despacho_consultar_resumen_granjas(mysqli $conn, array $filtros): 
         return [];
     }
 
-    $catalogo = mort_despacho_catalogo_cencos($conn, $filtros);
+    $stats = mort_despacho_resumen_stats_map($conn, $filtros);
+    $catalogo = mort_despacho_catalogo_cencos($conn, $filtros, $rango);
     if ($catalogo === []) {
         return [];
     }
-
-    $stats = mort_despacho_resumen_stats_map($conn, $filtros);
     $nombres = mort_despacho_nombres_granja($conn);
     $out = [];
     $n = 0;
