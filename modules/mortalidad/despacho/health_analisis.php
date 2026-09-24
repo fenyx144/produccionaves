@@ -70,8 +70,8 @@ try {
     $etapas = mort_despacho_consultar_etapas($conn, $filtros);
     $steps[] = ['step' => 'etapas', 'ok' => true, 'total' => $etapas['total'] ?? 0];
 
-    $catalogo = mort_despacho_catalogo_cencos($conn, $filtros, $rango);
-    $steps[] = ['step' => 'catalogo_cencos', 'ok' => true, 'count' => count($catalogo)];
+    $filasVenta = mort_despacho_ventas_agrupada_filas($conn, $filtros);
+    $steps[] = ['step' => 'ventas_agrupada', 'ok' => true, 'filas' => count($filasVenta)];
 
     $stats = mort_despacho_resumen_stats_map($conn, $filtros);
     $steps[] = ['step' => 'resumen_stats', 'ok' => true, 'keys' => count($stats)];
