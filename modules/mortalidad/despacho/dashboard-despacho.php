@@ -218,7 +218,7 @@ $ultimoDiaMes = date('Y-m-t');
             <div class="tabla-listado-wrapper bg-white rounded-xl shadow-md p-5 mdp-tabla-wrap">
                 <h4 class="mdp-panel-title" id="mdp-titulo-causas">Mortalidad por causa</h4>
                 <div class="table-wrapper" id="mdp-tabla-causas">
-                    <p class="mdp-empty">Use Buscar para cargar el análisis (todas las granjas si no elige una).</p>
+                    <p class="mdp-empty">Pulse Buscar. Sin filtro de granjas el periodo máximo es 31 días.</p>
                 </div>
             </div>
             <div class="tabla-listado-wrapper bg-white rounded-xl shadow-md p-5 mdp-tabla-wrap">

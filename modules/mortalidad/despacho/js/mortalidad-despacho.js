@@ -396,12 +396,15 @@
         });
     }
 
-    function mensajeErrorAjax(status, j) {
+    function mensajeErrorAjax(status, j, httpStatus) {
         if (j && j.message) {
             return j.message;
         }
-        if (status === 'timeout') {
-            return 'La consulta tardó demasiado. Acote granjas/campañas o reduzca el periodo.';
+        if (httpStatus === 429) {
+            return 'Hay otra consulta de Despacho en curso. Espere unos segundos e intente de nuevo.';
+        }
+        if (status === 'timeout' || httpStatus === 504) {
+            return 'La consulta superó el tiempo límite (90 s). Acote granjas/campañas o reduzca el periodo.';
         }
         return 'Fallo la consulta al servidor.';
     }
@@ -423,10 +426,10 @@
             }
         }
 
-        ajaxAnalisisBloque(params, 'principal', 120000)
+        ajaxAnalisisBloque(params, 'principal', 95000)
             .done(function (j) {
                 if (!j || !j.success) {
-                    Swal.fire({ icon: 'error', title: 'Error', text: mensajeErrorAjax('', j) });
+                    Swal.fire({ icon: 'error', title: 'Error', text: mensajeErrorAjax('', j, 200) });
                     return;
                 }
                 rangoTexto = tituloPeriodo(j.rango);
@@ -434,18 +437,18 @@
                 pintarCausas(j.causas || { filas: [], total: 0 }, rangoTexto);
             })
             .fail(function (xhr, status) {
-                let msg = mensajeErrorAjax(status);
+                let j = null;
                 try {
-                    const j = xhr.responseJSON;
-                    if (j && j.message) msg = j.message;
+                    j = xhr.responseJSON;
                 } catch (e) { /* ignore */ }
+                const msg = mensajeErrorAjax(status, j, xhr.status);
                 Swal.fire({ icon: 'error', title: 'Error', text: msg });
                 $('#mdp-tabla-resumen').html('<p class="mdp-empty">No se pudo cargar el resumen.</p>');
                 $('#mdp-tabla-causas').html('<p class="mdp-empty">No se pudo cargar causas.</p>');
             })
             .always(finalizar);
 
-        ajaxAnalisisBloque(params, 'etapas', 90000)
+        ajaxAnalisisBloque(params, 'etapas', 95000)
             .done(function (j) {
                 if (!j || !j.success) {
                     pintarEtapas({ filas: [], total: 0 }, rangoTexto || tituloPeriodo(j && j.rango));
@@ -592,6 +595,5 @@
             limpiarFiltros();
         });
 
-        cargarAnalisis();
     });
 })();

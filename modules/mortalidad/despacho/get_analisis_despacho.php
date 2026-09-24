@@ -42,10 +42,14 @@ if (empty($_SESSION['active'])) {
     exit;
 }
 
-try {
-    @set_time_limit(300);
+$slotAdquirido = false;
 
+try {
     require_once __DIR__ . '/mortalidad_despacho_lib.php';
+
+    $mdpTimeSec = defined('MORT_DESPACHO_QUERY_TIME_SEC') ? (int) MORT_DESPACHO_QUERY_TIME_SEC : 90;
+    @set_time_limit($mdpTimeSec + 15);
+    @ini_set('max_execution_time', (string) ($mdpTimeSec + 15));
 
     $conexionPath = null;
     foreach ([
@@ -73,8 +77,10 @@ try {
 
     mysqli_set_charset($conn, 'utf8');
     @mysqli_query($conn, "SET time_zone = 'America/Lima'");
+    mort_despacho_aplicar_limites_sesion_db($conn);
 
     $filtros = mort_despacho_parse_filtros(array_merge($_GET, $_POST));
+    mort_despacho_validar_politica_carga($filtros);
     $rango = mort_ventas_rango($filtros);
     if ($rango === null) {
         mysqli_close($conn);
@@ -82,6 +88,17 @@ try {
         echo json_encode(['success' => false, 'message' => 'Indique un periodo o rango de fechas válido.']);
         exit;
     }
+
+    if (!mort_despacho_slot_adquirir()) {
+        mysqli_close($conn);
+        http_response_code(429);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Ya hay consultas de Despacho en curso. Espere unos segundos e intente de nuevo.',
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    $slotAdquirido = true;
 
     $bloque = strtolower(trim((string) ($_GET['bloque'] ?? $_POST['bloque'] ?? 'completo')));
     if ($bloque === 'principal') {
@@ -124,12 +141,21 @@ try {
     if (isset($conn) && $conn instanceof mysqli) {
         @mysqli_close($conn);
     }
-    http_response_code(500);
+    $msg = $e->getMessage();
+    $code = 500;
+    if (stripos($msg, 'periodo') !== false || stripos($msg, 'granjas') !== false || stripos($msg, 'Demasiados') !== false) {
+        $code = 400;
+    }
+    http_response_code($code);
     echo json_encode([
         'success' => false,
         'libRev' => defined('MORT_DESPACHO_LIB_REV') ? MORT_DESPACHO_LIB_REV : null,
-        'message' => $e->getMessage(),
+        'message' => $msg,
         'file' => basename($e->getFile()),
         'line' => $e->getLine(),
     ], JSON_UNESCAPED_UNICODE | (defined('JSON_INVALID_UTF8_SUBSTITUTE') ? JSON_INVALID_UTF8_SUBSTITUTE : 0));
+} finally {
+    if ($slotAdquirido && function_exists('mort_despacho_slot_liberar')) {
+        mort_despacho_slot_liberar();
+    }
 }

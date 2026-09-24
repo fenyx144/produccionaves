@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /** Revisión desplegable (health / JSON libRev). Compatible PHP >= 7.2. */
 if (!defined('MORT_DESPACHO_LIB_REV')) {
-    define('MORT_DESPACHO_LIB_REV', '20260925e');
+    define('MORT_DESPACHO_LIB_REV', '20260925f');
 }
 
 if (!defined('MORT_DESPACHO_MAX_KEYS_VENTA')) {
@@ -13,6 +13,124 @@ if (!defined('MORT_DESPACHO_MAX_KEYS_VENTA')) {
 
 if (!defined('MORT_DESPACHO_TEMP_KEYS')) {
     define('MORT_DESPACHO_TEMP_KEYS', 'mort_dsp_vkeys');
+}
+
+/** Tiempo máximo PHP/BD por petición de análisis (evita bloquear el servidor compartido). */
+if (!defined('MORT_DESPACHO_QUERY_TIME_SEC')) {
+    define('MORT_DESPACHO_QUERY_TIME_SEC', 90);
+}
+
+/** Sin filtro de cencos: como mucho un mes calendario. */
+if (!defined('MORT_DESPACHO_MAX_DIAS_SIN_CENCOS')) {
+    define('MORT_DESPACHO_MAX_DIAS_SIN_CENCOS', 31);
+}
+
+if (!defined('MORT_DESPACHO_MAX_DIAS_ABSOLUTO')) {
+    define('MORT_DESPACHO_MAX_DIAS_ABSOLUTO', 366);
+}
+
+/** Consultas simultáneas Despacho por sesión (principal + etapas en paralelo). */
+if (!defined('MORT_DESPACHO_MAX_CONCURRENT_PER_SESSION')) {
+    define('MORT_DESPACHO_MAX_CONCURRENT_PER_SESSION', 2);
+}
+
+/**
+ * Límites de tiempo en la sesión MySQL (SELECT pesados no pueden exceder QUERY_TIME_SEC).
+ */
+function mort_despacho_aplicar_limites_sesion_db(mysqli $conn): void
+{
+    $sec = (int) MORT_DESPACHO_QUERY_TIME_SEC;
+    if ($sec < 1) {
+        return;
+    }
+    $ms = $sec * 1000;
+    @mysqli_query($conn, "SET SESSION max_execution_time = {$ms}");
+    @mysqli_query($conn, "SET SESSION max_statement_time = {$sec}");
+}
+
+/**
+ * @param array{desde: string, hasta: string}|null $rango
+ */
+function mort_despacho_dias_en_rango(?array $rango): int
+{
+    if ($rango === null || empty($rango['desde']) || empty($rango['hasta'])) {
+        return 0;
+    }
+    try {
+        $d1 = new DateTime($rango['desde']);
+        $d2 = new DateTime($rango['hasta']);
+    } catch (Exception $e) {
+        return 0;
+    }
+    if ($d2 < $d1) {
+        return 0;
+    }
+
+    return (int) $d1->diff($d2)->days + 1;
+}
+
+/**
+ * Evita consultas desproporcionadas que saturan MySQL (resto del ERP / otros proyectos).
+ *
+ * @param array<string, mixed> $filtros
+ */
+function mort_despacho_validar_politica_carga(array $filtros): void
+{
+    $rango = mort_ventas_rango($filtros);
+    if ($rango === null) {
+        throw new RuntimeException('Periodo inválido o incompleto.');
+    }
+    $dias = mort_despacho_dias_en_rango($rango);
+    if ($dias <= 0) {
+        throw new RuntimeException('Periodo inválido o incompleto.');
+    }
+    if ($dias > MORT_DESPACHO_MAX_DIAS_ABSOLUTO) {
+        throw new RuntimeException('El periodo máximo permitido es de un año. Reduzca el rango de fechas.');
+    }
+
+    $lista = $filtros['cencos_list'] ?? [];
+    $tieneCencos = is_array($lista) && count($lista) > 0;
+    if (!$tieneCencos && $dias > MORT_DESPACHO_MAX_DIAS_SIN_CENCOS) {
+        throw new RuntimeException(
+            'Sin granjas/campañas seleccionadas solo se permite hasta 31 días. '
+            . 'Use el filtro de granjas o acorte el periodo (por ejemplo un mes).'
+        );
+    }
+}
+
+/**
+ * Cupo de consultas pesadas concurrentes por sesión de usuario.
+ */
+function mort_despacho_slot_adquirir(): bool
+{
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        session_start();
+    }
+    $now = time();
+    $last = (int) ($_SESSION['mort_dsp_query_ts'] ?? 0);
+    $n = (int) ($_SESSION['mort_dsp_query_n'] ?? 0);
+    if ($last > 0 && ($now - $last) > (MORT_DESPACHO_QUERY_TIME_SEC + 30)) {
+        $n = 0;
+    }
+    if ($n >= MORT_DESPACHO_MAX_CONCURRENT_PER_SESSION) {
+        return false;
+    }
+    $_SESSION['mort_dsp_query_n'] = $n + 1;
+    $_SESSION['mort_dsp_query_ts'] = $now;
+
+    return true;
+}
+
+function mort_despacho_slot_liberar(): void
+{
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        return;
+    }
+    $n = (int) ($_SESSION['mort_dsp_query_n'] ?? 0);
+    $_SESSION['mort_dsp_query_n'] = max(0, $n - 1);
+    if ((int) $_SESSION['mort_dsp_query_n'] === 0) {
+        unset($_SESSION['mort_dsp_query_ts']);
+    }
 }
 
 /** Escapa valor SQL (PHP 7.2: mysqli_real_escape_string exige string; claves numéricas de granja pueden ser int). */
