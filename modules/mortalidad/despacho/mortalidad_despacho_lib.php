@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /** Revisión desplegable (health / JSON libRev). Compatible PHP >= 7.2. */
 if (!defined('MORT_DESPACHO_LIB_REV')) {
-    define('MORT_DESPACHO_LIB_REV', '20260925f');
+    define('MORT_DESPACHO_LIB_REV', '20260925g');
 }
 
 if (!defined('MORT_DESPACHO_MAX_KEYS_VENTA')) {
@@ -29,9 +29,9 @@ if (!defined('MORT_DESPACHO_MAX_DIAS_ABSOLUTO')) {
     define('MORT_DESPACHO_MAX_DIAS_ABSOLUTO', 366);
 }
 
-/** Consultas simultáneas Despacho por sesión (principal + etapas en paralelo). */
+/** Una consulta pesada a la vez por sesión (evita duplicar escaneos S700 en paralelo). */
 if (!defined('MORT_DESPACHO_MAX_CONCURRENT_PER_SESSION')) {
-    define('MORT_DESPACHO_MAX_CONCURRENT_PER_SESSION', 2);
+    define('MORT_DESPACHO_MAX_CONCURRENT_PER_SESSION', 1);
 }
 
 /**
@@ -181,11 +181,10 @@ function mort_despacho_filtros_clave_cache(array $filtros): array
  *
  * @param array<string, mixed> $filtros
  */
-function mort_despacho_append_filtros_movimiento(mysqli $conn, array $filtros, string $alias, array &$conds): void
+function mort_despacho_append_filtros_cenco_granja(mysqli $conn, array $filtros, string $alias, array &$conds): void
 {
     $a = preg_replace('/[^a-zA-Z0-9_]/', '', $alias) ?: 'mz';
     $conds[] = "LEFT(TRIM({$a}.tcencos), 1) = '6'";
-    mort_despacho_append_rango_tfectra($conn, $filtros, $a, $conds);
 
     $lista = $filtros['cencos_list'] ?? [];
     if (is_array($lista) && $lista !== []) {
@@ -200,6 +199,27 @@ function mort_despacho_append_filtros_movimiento(mysqli $conn, array $filtros, s
             $conds[] = "RIGHT(TRIM({$a}.tcencos), 3) = '" . mort_despacho_sql_esc($conn, $campania) . "'";
         }
     }
+}
+
+/**
+ * WHERE index-friendly: rango tfectra → tcodtra S700 → pollos (sin TRIM en columnas clave).
+ *
+ * @param array<string, mixed> $filtros
+ */
+function mort_despacho_append_where_s700_index(mysqli $conn, array $filtros, string $alias, array &$conds): void
+{
+    $a = preg_replace('/[^a-zA-Z0-9_]/', '', $alias) ?: 'mz';
+    mort_despacho_append_rango_tfectra($conn, $filtros, $a, $conds);
+    $conds[] = "{$a}.tcodtra = 'S700'";
+    $conds[] = "{$a}.tcodigo IN ('P0001001','P0001002')";
+    $conds[] = "{$a}.tcantid > 0";
+    mort_despacho_append_filtros_cenco_granja($conn, $filtros, $a, $conds);
+}
+
+/** @param array<string, mixed> $filtros */
+function mort_despacho_append_filtros_movimiento(mysqli $conn, array $filtros, string $alias, array &$conds): void
+{
+    mort_despacho_append_where_s700_index($conn, $filtros, $alias, $conds);
 }
 
 function mort_despacho_temp_keys_drop(mysqli $conn): void
@@ -240,12 +260,8 @@ function mort_despacho_temp_keys_prepare(mysqli $conn, array $filtros): int
         throw new RuntimeException('Temp claves venta: ' . mysqli_error($conn));
     }
 
-    $conds = [
-        "TRIM(mz.tcodigo) IN ('P0001001','P0001002')",
-        "TRIM(mz.tcodtra) = 'S700'",
-        'mz.tcantid > 0',
-    ];
-    mort_despacho_append_filtros_movimiento($conn, $filtros, 'mz', $conds);
+    $conds = [];
+    mort_despacho_append_where_s700_index($conn, $filtros, 'mz', $conds);
 
     $insert = "
     INSERT INTO `{$t}` (fecha, cenco6, tcencos, galpon, venta_macho, venta_hembra)
@@ -298,7 +314,8 @@ function mort_despacho_sql_join_claves_venta(string $aliasMz = 'mz', string $ali
     $t = MORT_DESPACHO_TEMP_KEYS;
 
     return "INNER JOIN `{$t}` {$k} ON
-        {$k}.fecha = DATE({$m}.tfectra)
+        {$m}.tfectra >= {$k}.fecha
+        AND {$m}.tfectra < DATE_ADD({$k}.fecha, INTERVAL 1 DAY)
         AND TRIM({$m}.tcencos) = {$k}.tcencos
         AND TRIM(CAST({$m}.tcodint AS CHAR)) = {$k}.galpon";
 }
@@ -329,7 +346,6 @@ function mort_despacho_ventas_agrupada_filas(mysqli $conn, array $filtros): arra
     $macho = "'P0001001'";
     $hembra = "'P0001002'";
 
-    $joinMz = mort_despacho_sql_join_claves_venta('mz', 'k');
     $sql = "
     SELECT
         k.fecha,
@@ -337,18 +353,18 @@ function mort_despacho_ventas_agrupada_filas(mysqli $conn, array $filtros): arra
         RIGHT(k.cenco6, 3) AS campania,
         k.galpon,
         (k.venta_macho + k.venta_hembra) AS venta,
-        COALESCE(SUM(CASE WHEN TRIM(mz.tcodtra) = {$s808} THEN mz.tcantid ELSE 0 END), 0) AS mortalidad,
+        COALESCE(SUM(mz.tcantid), 0) AS mortalidad,
         k.venta_macho AS venta_macho,
         k.venta_hembra AS venta_hembra,
-        COALESCE(SUM(CASE WHEN TRIM(mz.tcodtra) = {$s808} AND TRIM(mz.tcodigo) = {$macho} THEN mz.tcantid ELSE 0 END), 0) AS mort_macho,
-        COALESCE(SUM(CASE WHEN TRIM(mz.tcodtra) = {$s808} AND TRIM(mz.tcodigo) = {$hembra} THEN mz.tcantid ELSE 0 END), 0) AS mort_hembra,
-        CASE WHEN k.venta_macho > 0 THEN COALESCE(SUM(CASE WHEN TRIM(mz.tcodtra) = {$s808} AND TRIM(mz.tcodigo) = {$macho}
+        COALESCE(SUM(CASE WHEN mz.tcodigo = {$macho} THEN mz.tcantid ELSE 0 END), 0) AS mort_macho,
+        COALESCE(SUM(CASE WHEN mz.tcodigo = {$hembra} THEN mz.tcantid ELSE 0 END), 0) AS mort_hembra,
+        CASE WHEN k.venta_macho > 0 THEN COALESCE(SUM(CASE WHEN mz.tcodigo = {$macho}
             AND (
                 UPPER(TRIM(COALESCE(mz.tcategoria, ''))) = 'DESPACHO'
                 OR UPPER(TRIM(COALESCE(mz.flujo, ''))) = 'DESPACHO'
                 OR LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0') IN {$causasDespacho}
             ) THEN mz.tcantid ELSE 0 END), 0) ELSE 0 END AS mort_desp_macho,
-        CASE WHEN k.venta_hembra > 0 THEN COALESCE(SUM(CASE WHEN TRIM(mz.tcodtra) = {$s808} AND TRIM(mz.tcodigo) = {$hembra}
+        CASE WHEN k.venta_hembra > 0 THEN COALESCE(SUM(CASE WHEN mz.tcodigo = {$hembra}
             AND (
                 UPPER(TRIM(COALESCE(mz.tcategoria, ''))) = 'DESPACHO'
                 OR UPPER(TRIM(COALESCE(mz.flujo, ''))) = 'DESPACHO'
@@ -356,11 +372,12 @@ function mort_despacho_ventas_agrupada_filas(mysqli $conn, array $filtros): arra
             ) THEN mz.tcantid ELSE 0 END), 0) ELSE 0 END AS mort_desp_hembra
     FROM `{$t}` k
     LEFT JOIN movi_zonas mz ON
-        k.fecha = DATE(mz.tfectra)
+        mz.tcodtra = 'S808'
+        AND mz.tcodigo IN ('P0001001','P0001002')
+        AND mz.tfectra >= k.fecha
+        AND mz.tfectra < DATE_ADD(k.fecha, INTERVAL 1 DAY)
         AND TRIM(mz.tcencos) = k.tcencos
         AND TRIM(CAST(mz.tcodint AS CHAR)) = k.galpon
-        AND TRIM(mz.tcodigo) IN ('P0001001','P0001002')
-        AND TRIM(mz.tcodtra) = {$s808}
     GROUP BY
         k.fecha, k.cenco6, k.galpon, k.venta_macho, k.venta_hembra, k.tcencos
     ORDER BY k.fecha DESC, k.cenco6 ASC, k.galpon ASC";
@@ -660,24 +677,24 @@ function mort_despacho_causas_agregadas_sql(mysqli $conn, array $filtros): array
     }
 
     $sqlDesp = mort_despacho_sql_es_despacho('mz');
-    $joinKeys = mort_despacho_sql_join_claves_venta('mz', 'k');
-    $where = "
-        TRIM(mz.tcodigo) IN ('P0001001','P0001002')
-        AND TRIM(mz.tcodtra) = 'S808'
-        AND mz.tcantid > 0
-        AND {$sqlDesp}
-        AND (
-            (TRIM(mz.tcodigo) = 'P0001001' AND k.venta_macho > 0)
-            OR (TRIM(mz.tcodigo) = 'P0001002' AND k.venta_hembra > 0)
-        )";
-
     $sql = "
     SELECT
         LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0') AS cod_mort,
         COALESCE(SUM(mz.tcantid), 0) AS cantidad
-    FROM movi_zonas mz
-    {$joinKeys}
-    WHERE {$where}
+    FROM `{$t}` k
+    INNER JOIN movi_zonas mz ON
+        mz.tcodtra = 'S808'
+        AND mz.tcodigo IN ('P0001001','P0001002')
+        AND mz.tfectra >= k.fecha
+        AND mz.tfectra < DATE_ADD(k.fecha, INTERVAL 1 DAY)
+        AND TRIM(mz.tcencos) = k.tcencos
+        AND TRIM(CAST(mz.tcodint AS CHAR)) = k.galpon
+    WHERE mz.tcantid > 0
+      AND {$sqlDesp}
+      AND (
+            (mz.tcodigo = 'P0001001' AND k.venta_macho > 0)
+         OR (mz.tcodigo = 'P0001002' AND k.venta_hembra > 0)
+      )
     GROUP BY LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0')
     ";
 

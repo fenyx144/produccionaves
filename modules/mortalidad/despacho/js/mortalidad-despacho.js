@@ -415,26 +415,16 @@
         const params = leerFiltrosFormulario();
         setIndicadorCargaMdp(true, 'Cargando análisis…');
 
-        let rangoTexto = '';
-        let pendientes = 2;
-
-        function finalizar() {
-            pendientes -= 1;
-            if (pendientes <= 0) {
-                cargando = false;
-                setIndicadorCargaMdp(false);
-            }
-        }
-
-        ajaxAnalisisBloque(params, 'principal', 95000)
+        ajaxAnalisisBloque(params, 'completo', 120000)
             .done(function (j) {
                 if (!j || !j.success) {
                     Swal.fire({ icon: 'error', title: 'Error', text: mensajeErrorAjax('', j, 200) });
                     return;
                 }
-                rangoTexto = tituloPeriodo(j.rango);
+                const rangoTexto = tituloPeriodo(j.rango);
                 pintarResumen(j.resumenGranjas || [], rangoTexto);
                 pintarCausas(j.causas || { filas: [], total: 0 }, rangoTexto);
+                pintarEtapas(j.etapas || { filas: [], total: 0 }, rangoTexto);
             })
             .fail(function (xhr, status) {
                 let j = null;
@@ -443,25 +433,14 @@
                 } catch (e) { /* ignore */ }
                 const msg = mensajeErrorAjax(status, j, xhr.status);
                 Swal.fire({ icon: 'error', title: 'Error', text: msg });
-                $('#mdp-tabla-resumen').html('<p class="mdp-empty">No se pudo cargar el resumen.</p>');
-                $('#mdp-tabla-causas').html('<p class="mdp-empty">No se pudo cargar causas.</p>');
+                $('#mdp-tabla-resumen').html('<p class="mdp-empty">No se pudo cargar el análisis.</p>');
+                $('#mdp-tabla-causas').html('<p class="mdp-empty">No se pudo cargar el análisis.</p>');
+                $('#mdp-tabla-etapas').html('<p class="mdp-empty">No se pudo cargar el análisis.</p>');
             })
-            .always(finalizar);
-
-        ajaxAnalisisBloque(params, 'etapas', 95000)
-            .done(function (j) {
-                if (!j || !j.success) {
-                    pintarEtapas({ filas: [], total: 0 }, rangoTexto || tituloPeriodo(j && j.rango));
-                    return;
-                }
-                const rt = rangoTexto || tituloPeriodo(j.rango);
-                pintarEtapas(j.etapas || { filas: [], total: 0 }, rt);
-            })
-            .fail(function () {
-                pintarEtapas({ filas: [], total: 0 }, rangoTexto);
-                $('#mdp-tabla-etapas').html('<p class="mdp-empty">Etapas no disponibles (consulta lenta o sin datos).</p>');
-            })
-            .always(finalizar);
+            .always(function () {
+                cargando = false;
+                setIndicadorCargaMdp(false);
+            });
     }
 
     function syncGranjaDisplay() {
