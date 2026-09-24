@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /** Revisión desplegable (health / JSON libRev). Compatible PHP >= 7.2. */
 if (!defined('MORT_DESPACHO_LIB_REV')) {
-    define('MORT_DESPACHO_LIB_REV', '20260925j');
+    define('MORT_DESPACHO_LIB_REV', '20260925k');
 }
 
 if (!defined('MORT_DESPACHO_MAX_KEYS_VENTA')) {
@@ -303,9 +303,12 @@ function mort_despacho_sql_on_s808_claves(string $aliasMz = 'mz', string $aliasK
 {
     $m = preg_replace('/[^a-zA-Z0-9_]/', '', $aliasMz) ?: 'mz';
     $k = preg_replace('/[^a-zA-Z0-9_]/', '', $aliasKeys) ?: 'k';
+    $causas = mort_despacho_codigos_causa_sql_in();
 
     return "{$m}.tcodtra = 'S808'
         AND {$m}.tcodigo IN ('P0001001','P0001002')
+        AND {$m}.tcantid > 0
+        AND LPAD(TRIM(COALESCE({$m}.tcod_mortgrs, '')), 2, '0') IN {$causas}
         AND {$m}.tfectra >= {$k}.fecha
         AND {$m}.tfectra < DATE_ADD({$k}.fecha, INTERVAL 1 DAY)
         AND TRIM({$m}.tcencos) = {$k}.tcencos
