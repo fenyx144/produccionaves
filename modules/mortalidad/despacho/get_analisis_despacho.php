@@ -20,12 +20,16 @@ register_shutdown_function(static function (): void {
         http_response_code(500);
         header('Content-Type: application/json; charset=utf-8');
     }
+    $flags = JSON_UNESCAPED_UNICODE;
+    if (defined('JSON_INVALID_UTF8_SUBSTITUTE')) {
+        $flags |= JSON_INVALID_UTF8_SUBSTITUTE;
+    }
     echo json_encode([
         'success' => false,
         'message' => 'Fatal: ' . ($err['message'] ?? 'error'),
         'file' => isset($err['file']) ? basename((string) $err['file']) : '',
         'line' => $err['line'] ?? 0,
-    ], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+    ], $flags);
 });
 
 if (session_status() !== PHP_SESSION_ACTIVE) {

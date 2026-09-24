@@ -4,13 +4,112 @@ declare(strict_types=1);
 
 /** Revisión desplegable (health / JSON libRev). Compatible PHP >= 7.2. */
 if (!defined('MORT_DESPACHO_LIB_REV')) {
-    define('MORT_DESPACHO_LIB_REV', '20260924i');
+    define('MORT_DESPACHO_LIB_REV', '20260925a');
 }
 
 /** Escapa valor SQL (PHP 7.2: mysqli_real_escape_string exige string; claves numéricas de granja pueden ser int). */
 function mort_despacho_sql_esc(mysqli $conn, $value): string
 {
     return mysqli_real_escape_string($conn, (string) $value);
+}
+
+/**
+ * Rango sobre tfectra sin DATE() en columna (mejor uso de índice).
+ *
+ * @param array<string, mixed> $filtros
+ */
+function mort_despacho_append_rango_tfectra(mysqli $conn, array $filtros, string $alias, array &$conds): void
+{
+    $rango = mort_ventas_rango($filtros);
+    if ($rango === null) {
+        return;
+    }
+    $a = preg_replace('/[^a-zA-Z0-9_]/', '', $alias) ?: 'mz';
+    $desde = mort_despacho_sql_esc($conn, $rango['desde'] . ' 00:00:00');
+    $hasta = mort_despacho_sql_esc($conn, $rango['hasta']);
+    $conds[] = "{$a}.tfectra >= '{$desde}' AND {$a}.tfectra < DATE_ADD('{$hasta}', INTERVAL 1 DAY)";
+}
+
+/**
+ * @param array<string, mixed> $filtros
+ * @return array<string, mixed>
+ */
+function mort_despacho_filtros_clave_cache(array $filtros): array
+{
+    return [
+        'periodoTipo' => (string) ($filtros['periodoTipo'] ?? ''),
+        'fechaUnica' => (string) ($filtros['fechaUnica'] ?? ''),
+        'fechaInicio' => (string) ($filtros['fechaInicio'] ?? ''),
+        'fechaFin' => (string) ($filtros['fechaFin'] ?? ''),
+        'mesUnico' => (string) ($filtros['mesUnico'] ?? ''),
+        'mesInicio' => (string) ($filtros['mesInicio'] ?? ''),
+        'mesFin' => (string) ($filtros['mesFin'] ?? ''),
+        'granja' => (string) ($filtros['granja'] ?? ''),
+        'campania' => (string) ($filtros['campania'] ?? ''),
+        'cencos_list' => $filtros['cencos_list'] ?? [],
+    ];
+}
+
+/**
+ * Filas galpón-día de mort_ventas_sql_agrupada (una sola ejecución por request / filtros).
+ *
+ * @return list<array<string, mixed>>
+ */
+function mort_despacho_ventas_agrupada_filas(mysqli $conn, array $filtros): array
+{
+    static $cache = [];
+    $key = md5(json_encode(mort_despacho_filtros_clave_cache($filtros)));
+    if (isset($cache[$key])) {
+        return $cache[$key];
+    }
+
+    $inner = mort_ventas_sql_agrupada($conn, $filtros);
+    $filtroCencos = mort_despacho_sql_filtro_cencos_en_x($conn, $filtros);
+    $sql = "SELECT x.* FROM ({$inner}) x WHERE 1=1 {$filtroCencos}";
+
+    $rows = [];
+    $res = mysqli_query($conn, $sql);
+    if (!$res) {
+        throw new RuntimeException('Consulta ventas agrupadas: ' . mysqli_error($conn));
+    }
+    while ($row = mysqli_fetch_assoc($res)) {
+        $rows[] = $row;
+    }
+    $cache[$key] = $rows;
+
+    return $rows;
+}
+
+/** Condición: hubo venta S700 del mismo sexo ese día en el mismo cenco/galpón (regla Ventas). */
+function mort_despacho_sql_existe_venta_sexo_dia(string $aliasMort = 'mz', string $aliasVenta = 'vz'): string
+{
+    $m = preg_replace('/[^a-zA-Z0-9_]/', '', $aliasMort) ?: 'mz';
+    $v = preg_replace('/[^a-zA-Z0-9_]/', '', $aliasVenta) ?: 'vz';
+
+    return "(
+        (TRIM({$m}.tcodigo) = 'P0001001' AND EXISTS (
+            SELECT 1 FROM movi_zonas {$v}
+            WHERE TRIM({$v}.tcodtra) = 'S700'
+              AND TRIM({$v}.tcodigo) = 'P0001001'
+              AND {$v}.tcantid > 0
+              AND TRIM({$v}.tcencos) = TRIM({$m}.tcencos)
+              AND TRIM(CAST({$v}.tcodint AS CHAR)) = TRIM(CAST({$m}.tcodint AS CHAR))
+              AND {$v}.tfectra >= DATE({$m}.tfectra)
+              AND {$v}.tfectra < DATE({$m}.tfectra) + INTERVAL 1 DAY
+            LIMIT 1
+        ))
+        OR (TRIM({$m}.tcodigo) = 'P0001002' AND EXISTS (
+            SELECT 1 FROM movi_zonas {$v}
+            WHERE TRIM({$v}.tcodtra) = 'S700'
+              AND TRIM({$v}.tcodigo) = 'P0001002'
+              AND {$v}.tcantid > 0
+              AND TRIM({$v}.tcencos) = TRIM({$m}.tcencos)
+              AND TRIM(CAST({$v}.tcodint AS CHAR)) = TRIM(CAST({$m}.tcodint AS CHAR))
+              AND {$v}.tfectra >= DATE({$m}.tfectra)
+              AND {$v}.tfectra < DATE({$m}.tfectra) + INTERVAL 1 DAY
+            LIMIT 1
+        ))
+    )";
 }
 
 /**
@@ -208,12 +307,7 @@ function mort_despacho_where_base_movimientos(mysqli $conn, array $filtros, stri
         "TRIM({$a}.tcodtra) IN ('S700','S808')",
     ];
 
-    $rango = mort_ventas_rango($filtros);
-    if ($rango !== null) {
-        $desde = mort_despacho_sql_esc($conn, $rango['desde']);
-        $hasta = mort_despacho_sql_esc($conn, $rango['hasta']);
-        $conds[] = "DATE({$a}.tfectra) BETWEEN '{$desde}' AND '{$hasta}'";
-    }
+    mort_despacho_append_rango_tfectra($conn, $filtros, $a, $conds);
 
     $lista = $filtros['cencos_list'] ?? [];
     if (is_array($lista) && $lista !== []) {
@@ -248,12 +342,7 @@ function mort_despacho_where_s700(mysqli $conn, array $filtros, string $alias = 
         "TRIM({$a}.tcodtra) = 'S700'",
     ];
 
-    $rango = mort_ventas_rango($filtros);
-    if ($rango !== null) {
-        $desde = mort_despacho_sql_esc($conn, $rango['desde']);
-        $hasta = mort_despacho_sql_esc($conn, $rango['hasta']);
-        $conds[] = "DATE({$a}.tfectra) BETWEEN '{$desde}' AND '{$hasta}'";
-    }
+    mort_despacho_append_rango_tfectra($conn, $filtros, $a, $conds);
 
     $lista = $filtros['cencos_list'] ?? [];
     if (is_array($lista) && $lista !== []) {
@@ -275,93 +364,43 @@ function mort_despacho_where_s700(mysqli $conn, array $filtros, string $alias = 
 }
 
 /**
- * Cantidad despachada por fecha + cenco: SUM(venta) sobre mort_ventas_sql_agrupada
- * (misma agregación que el listado Ventas, sumando galpones del cenco).
- *
- * @return array<string, float>
- */
-function mort_despacho_resumen_cantidad_despachada_map(mysqli $conn, array $filtros): array
-{
-    $inner = mort_ventas_sql_agrupada($conn, $filtros);
-    $filtroCencos = mort_despacho_sql_filtro_cencos_en_x($conn, $filtros);
-
-    $sql = "
-    SELECT
-        x.fecha,
-        CONCAT(LPAD(TRIM(x.granja), 3, '0'), LPAD(TRIM(x.campania), 3, '0')) AS cencos,
-        COALESCE(SUM(x.venta), 0) AS cantidad_despachada
-    FROM ({$inner}) x
-    WHERE 1=1 {$filtroCencos}
-    GROUP BY x.fecha, LPAD(TRIM(x.granja), 3, '0'), LPAD(TRIM(x.campania), 3, '0')
-    HAVING cantidad_despachada > 0
-    ";
-
-    $map = [];
-    $res = mysqli_query($conn, $sql);
-    if (!$res) {
-        throw new RuntimeException('Consulta cantidad despachada: ' . mysqli_error($conn));
-    }
-    while ($row = mysqli_fetch_assoc($res)) {
-        $fecha = (string) ($row['fecha'] ?? '');
-        $c6 = mort_despacho_cenco_desde_tcencos((string) ($row['cencos'] ?? ''));
-        if ($fecha === '' || $c6 === '') {
-            continue;
-        }
-        $map[$fecha . '|' . $c6] = (float) ($row['cantidad_despachada'] ?? 0);
-    }
-
-    return $map;
-}
-
-/**
- * Subconsulta: venta diaria por cenco, galpón y sexo (M/H).
- */
-function mort_despacho_sql_venta_dia_galpon(mysqli $conn, array $filtros): string
-{
-    $where = mort_despacho_where_base_movimientos($conn, $filtros, 'vz');
-
-    return "
-    SELECT
-        DATE(vz.tfectra) AS fecha,
-        TRIM(vz.tcencos) AS cencos,
-        TRIM(CAST(vz.tcodint AS CHAR)) AS galpon,
-        SUM(CASE WHEN TRIM(vz.tcodigo) = 'P0001001' THEN vz.tcantid ELSE 0 END) AS venta_m,
-        SUM(CASE WHEN TRIM(vz.tcodigo) = 'P0001002' THEN vz.tcantid ELSE 0 END) AS venta_h
-    FROM movi_zonas vz
-    WHERE {$where}
-      AND TRIM(vz.tcodtra) = 'S700'
-    GROUP BY DATE(vz.tfectra), TRIM(vz.tcencos), TRIM(CAST(vz.tcodint AS CHAR))
-    ";
-}
-
-/**
  * SQL agregado: cantidades por código de causa (mortalidad despacho válida).
  *
  * @return list<array{cod_mort: string, cantidad: int}>
  */
 function mort_despacho_causas_agregadas_sql(mysqli $conn, array $filtros): array
 {
-    $where = mort_despacho_where_base_movimientos($conn, $filtros, 'mz');
+    $conds = [
+        "TRIM(mz.tcodigo) IN ('P0001001','P0001002')",
+        "TRIM(mz.tcodtra) = 'S808'",
+        'mz.tcantid > 0',
+    ];
+    mort_despacho_append_rango_tfectra($conn, $filtros, 'mz', $conds);
+    $lista = $filtros['cencos_list'] ?? [];
+    if (is_array($lista) && $lista !== []) {
+        mort_despacho_append_filtro_cencos($conn, $filtros, 'mz', $conds);
+    } else {
+        $granja = trim((string) ($filtros['granja'] ?? ''));
+        if ($granja !== '') {
+            $conds[] = "LEFT(TRIM(mz.tcencos), 3) = '" . mort_despacho_sql_esc($conn, $granja) . "'";
+        }
+        $campania = trim((string) ($filtros['campania'] ?? ''));
+        if ($campania !== '') {
+            $conds[] = "RIGHT(TRIM(mz.tcencos), 3) = '" . mort_despacho_sql_esc($conn, $campania) . "'";
+        }
+    }
     $sqlDesp = mort_despacho_sql_es_despacho('mz');
-    $subVenta = mort_despacho_sql_venta_dia_galpon($conn, $filtros);
+    $exVenta = mort_despacho_sql_existe_venta_sexo_dia('mz', 'vz');
+    $where = implode(' AND ', $conds);
 
     $sql = "
     SELECT
         LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0') AS cod_mort,
         COALESCE(SUM(mz.tcantid), 0) AS cantidad
     FROM movi_zonas mz
-    INNER JOIN ({$subVenta}) v
-        ON v.fecha = DATE(mz.tfectra)
-       AND v.cencos = TRIM(mz.tcencos)
-       AND v.galpon = TRIM(CAST(mz.tcodint AS CHAR))
     WHERE {$where}
-      AND TRIM(mz.tcodtra) = 'S808'
-      AND mz.tcantid > 0
       AND {$sqlDesp}
-      AND (
-            (TRIM(mz.tcodigo) = 'P0001001' AND v.venta_m > 0)
-         OR (TRIM(mz.tcodigo) = 'P0001002' AND v.venta_h > 0)
-      )
+      AND {$exVenta}
     GROUP BY LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0')
     ";
 
@@ -477,25 +516,44 @@ function mort_despacho_consultar_etapas(mysqli $conn, array $filtros): array
         return mort_despacho_armar_etapas_respuesta($totales);
     }
 
-    $subVenta = mort_despacho_sql_venta_dia_galpon($conn, $filtros);
     $where = implode(' AND ', $conds);
+    $exM = "
+        EXISTS (
+            SELECT 1 FROM movi_zonas vz
+            WHERE TRIM(vz.tcodtra) = 'S700'
+              AND TRIM(vz.tcodigo) = 'P0001001'
+              AND vz.tcantid > 0
+              AND TRIM(vz.tcencos) = CONCAT(TRIM(c.granja), TRIM(c.campania))
+              AND TRIM(CAST(vz.tcodint AS CHAR)) = TRIM(c.galpon)
+              AND vz.tfectra >= c.fechaRegistro
+              AND vz.tfectra < c.fechaRegistro + INTERVAL 1 DAY
+            LIMIT 1
+        )";
+    $exH = "
+        EXISTS (
+            SELECT 1 FROM movi_zonas vz
+            WHERE TRIM(vz.tcodtra) = 'S700'
+              AND TRIM(vz.tcodigo) = 'P0001002'
+              AND vz.tcantid > 0
+              AND TRIM(vz.tcencos) = CONCAT(TRIM(c.granja), TRIM(c.campania))
+              AND TRIM(CAST(vz.tcodint AS CHAR)) = TRIM(c.galpon)
+              AND vz.tfectra >= c.fechaRegistro
+              AND vz.tfectra < c.fechaRegistro + INTERVAL 1 DAY
+            LIMIT 1
+        )";
 
     $sql = '
     SELECT ' . implode(', ', $selectSum) . "
     FROM san_fact_mortalidad_det d
     INNER JOIN san_fact_mortalidad_cab c ON c.id = d.cabId
-    INNER JOIN ({$subVenta}) v
-        ON v.fecha = c.fechaRegistro
-       AND v.cencos = CONCAT(c.granja, c.campania)
-       AND v.galpon = TRIM(c.galpon)
     WHERE {$where}
       AND (
-            (d.sexo = 'M' AND v.venta_m > 0)
-         OR (d.sexo = 'H' AND v.venta_h > 0)
+            (d.sexo = 'M' AND {$exM})
+         OR (d.sexo = 'H' AND {$exH})
       )
     ";
 
-    $res = mysqli_query($conn, $sql);
+    $res = @mysqli_query($conn, $sql);
     if ($res && ($row = mysqli_fetch_assoc($res))) {
         foreach ($colsDisp as $d) {
             $col = $d['col'];
@@ -757,56 +815,33 @@ function mort_despacho_sql_filtro_cencos_en_x(mysqli $conn, array $filtros): str
 }
 
 /**
- * Mortalidad de despacho por fecha + cenco (reglas Ventas), agregado granja+campaña.
+ * Resumen stats desde filas Ventas (una sola query mort_ventas_sql_agrupada por request).
  *
- * @return array<string, int>
- */
-function mort_despacho_resumen_muertos_map(mysqli $conn, array $filtros): array
-{
-    $inner = mort_ventas_sql_agrupada($conn, $filtros);
-    $filtroCencos = mort_despacho_sql_filtro_cencos_en_x($conn, $filtros);
-
-    $sql = "
-    SELECT
-        x.fecha,
-        CONCAT(LPAD(TRIM(x.granja), 3, '0'), LPAD(TRIM(x.campania), 3, '0')) AS cencos,
-        COALESCE(SUM(x.mort_desp_macho + x.mort_desp_hembra), 0) AS muertos
-    FROM ({$inner}) x
-    WHERE 1=1 {$filtroCencos}
-    GROUP BY x.fecha, LPAD(TRIM(x.granja), 3, '0'), LPAD(TRIM(x.campania), 3, '0')
-    ";
-
-    $map = [];
-    $res = mysqli_query($conn, $sql);
-    if (!$res) {
-        throw new RuntimeException('Consulta muertos despacho: ' . mysqli_error($conn));
-    }
-    while ($row = mysqli_fetch_assoc($res)) {
-        $fecha = (string) ($row['fecha'] ?? '');
-        $c6 = mort_despacho_cenco_desde_tcencos((string) ($row['cencos'] ?? ''));
-        if ($fecha === '' || $c6 === '') {
-            continue;
-        }
-        $map[$fecha . '|' . $c6] = (int) ($row['muertos'] ?? 0);
-    }
-
-    return $map;
-}
-
-/**
  * @return array<string, array{cantidadDespachada: float, muertos: int}>
  */
 function mort_despacho_resumen_stats_map(mysqli $conn, array $filtros): array
 {
-    $cantMap = mort_despacho_resumen_cantidad_despachada_map($conn, $filtros);
-    $muertosMap = mort_despacho_resumen_muertos_map($conn, $filtros);
-    $keys = array_unique(array_merge(array_keys($cantMap), array_keys($muertosMap)));
+    $filas = mort_despacho_ventas_agrupada_filas($conn, $filtros);
     $map = [];
-    foreach ($keys as $key) {
-        $map[$key] = [
-            'cantidadDespachada' => (float) ($cantMap[$key] ?? 0.0),
-            'muertos' => (int) ($muertosMap[$key] ?? 0),
-        ];
+    foreach ($filas as $row) {
+        $venta = (float) ($row['venta'] ?? 0);
+        if ($venta <= 0) {
+            continue;
+        }
+        $fecha = (string) ($row['fecha'] ?? '');
+        $cenco = mort_despacho_cenco_seis(
+            (string) ($row['granja'] ?? ''),
+            (string) ($row['campania'] ?? '')
+        );
+        if ($fecha === '' || $cenco === '') {
+            continue;
+        }
+        $key = $fecha . '|' . $cenco;
+        if (!isset($map[$key])) {
+            $map[$key] = ['cantidadDespachada' => 0.0, 'muertos' => 0];
+        }
+        $map[$key]['cantidadDespachada'] += $venta;
+        $map[$key]['muertos'] += (int) ($row['mort_desp_macho'] ?? 0) + (int) ($row['mort_desp_hembra'] ?? 0);
     }
 
     return $map;
@@ -926,11 +961,19 @@ function mort_despacho_nombres_granja(mysqli $conn): array
  */
 function mort_despacho_analisis_completo(mysqli $conn, array $filtros): array
 {
-    $causas = mort_despacho_agregar_causas(mort_despacho_causas_agregadas_sql($conn, $filtros));
-    $etapas = mort_despacho_consultar_etapas($conn, $filtros);
-    $resumen = mort_despacho_consultar_resumen_granjas($conn, $filtros);
-
     $rango = mort_ventas_rango($filtros);
+
+    // Precalentar filas Ventas (cache request) antes de resumen/causas/etapas.
+    mort_despacho_ventas_agrupada_filas($conn, $filtros);
+
+    $resumen = mort_despacho_consultar_resumen_granjas($conn, $filtros);
+    $causas = mort_despacho_agregar_causas(mort_despacho_causas_agregadas_sql($conn, $filtros));
+
+    try {
+        $etapas = mort_despacho_consultar_etapas($conn, $filtros);
+    } catch (\Throwable $e) {
+        $etapas = mort_despacho_armar_etapas_respuesta([]);
+    }
 
     return [
         'rango' => $rango,
