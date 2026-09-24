@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /** Revisión desplegable (health / JSON libRev). Compatible PHP >= 7.2. */
 if (!defined('MORT_DESPACHO_LIB_REV')) {
-    define('MORT_DESPACHO_LIB_REV', '20260925p');
+    define('MORT_DESPACHO_LIB_REV', '20260925q');
 }
 
 if (!defined('MORT_DESPACHO_MAX_KEYS_VENTA')) {
