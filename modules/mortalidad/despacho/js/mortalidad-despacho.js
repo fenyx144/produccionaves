@@ -4,6 +4,8 @@
     const cfg = window.MORT_DESPACHO_CFG || {};
     let cargando = false;
     let mrtDspGmc = null;
+    let selCodes = [];
+    let campByGranja = {};
 
     function escapeHtml(s) {
         return String(s ?? '')
@@ -43,6 +45,11 @@
         return formatearFechaDMY(rango.desde) + ' – ' + formatearFechaDMY(rango.hasta);
     }
 
+    function setMultiState(st) {
+        selCodes = (st && st.selCodes) ? st.selCodes.slice() : [];
+        campByGranja = (st && st.campByGranja) ? JSON.parse(JSON.stringify(st.campByGranja)) : {};
+    }
+
     function leerFiltrosFormulario() {
         return {
             periodoTipo: ($('#mdp-periodo-tipo').val() || 'POR_FECHA').trim(),
@@ -52,8 +59,7 @@
             mesUnico: ($('#mdp-mes-unico').val() || '').trim(),
             mesInicio: ($('#mdp-mes-inicio').val() || '').trim(),
             mesFin: ($('#mdp-mes-fin').val() || '').trim(),
-            granja: ($('#mrt-dsp-h-granja').val() || '').trim(),
-            campania: ($('#mrt-dsp-h-campania').val() || '').trim()
+            cencos: selCodes.join(',')
         };
     }
 
@@ -76,14 +82,15 @@
             $(containerId).html('<p class="mdp-empty">Sin datos para el periodo y filtros seleccionados.</p>');
             return;
         }
-        let html = '<table class="data-table config-table w-full text-sm border-collapse"><thead><tr>';
+        let html = '<table class="data-table config-table mdp-table w-full text-sm border-collapse"><thead><tr>';
         cols.forEach(function (c) {
             const cls = c.thClass ? ' class="' + c.thClass + '"' : '';
             html += '<th' + cls + '>' + escapeHtml(c.label) + '</th>';
         });
         html += '</tr></thead><tbody>';
         filas.forEach(function (f, idx) {
-            html += '<tr>';
+            const rowCls = f._rowClass ? ' class="' + f._rowClass + '"' : '';
+            html += '<tr' + rowCls + '>';
             cols.forEach(function (c) {
                 const tdCls = c.tdClass ? ' class="' + c.tdClass + '"' : '';
                 const val = c.render(f, idx);
@@ -168,18 +175,21 @@
 
     function pintarResumen(filas) {
         if (!filas || filas.length === 0) {
-            $('#mdp-tabla-resumen').html('<p class="mdp-empty">Sin registros de despacho en el periodo.</p>');
+            $('#mdp-tabla-resumen').html('<p class="mdp-empty">Sin registros en el periodo.</p>');
             return;
         }
         const rows = filas.map(function (r, idx) {
+            const cantNum = Number(r.cantidad) || 0;
+            const muertosNum = Number(r.muertos) || 0;
             return {
                 numero: idx + 1,
                 fecha: formatearFechaYMDslash(r.fecha),
                 cencos: r.cencos,
                 granja: r.granja,
-                cantidad: formatearNumero(r.cantidad, 2),
-                muertos: r.muertos > 0 ? formatearNumero(r.muertos) : '-',
-                porcentaje: formatearNumero(r.porcentaje, 2) + '%'
+                cantidad: formatearNumero(cantNum, 2),
+                muertos: muertosNum > 0 ? formatearNumero(muertosNum) : '-',
+                porcentaje: formatearNumero(r.porcentaje, 2) + '%',
+                _rowClass: cantNum <= 0 ? 'mdp-fila-sin-despacho' : ''
             };
         });
         renderTablaSimple(
@@ -229,21 +239,31 @@
     }
 
     function syncGranjaDisplay() {
-        const g = ($('#mrt-dsp-h-granja').val() || '').trim();
-        const c = ($('#mrt-dsp-h-campania').val() || '').trim();
         const inp = document.getElementById('mrt-dsp-granja-resumen');
         if (!inp) return;
-        if (g && c) {
-            let nom = '';
-            const meta = (cfg.granjasMeta || []).find(function (m) { return m.granja === g; });
-            if (meta) nom = meta.nombre || meta.nombre_granja || '';
-            inp.value = g + (nom ? ' ' + nom : '') + ' - ' + c;
-            inp.title = 'Granja ' + g + (nom ? ' ' + nom : '') + ', campaña ' + c + ' — Clic para cambiar';
-        } else {
+
+        if (!selCodes.length) {
             inp.value = '';
             inp.placeholder = 'Clic para seleccionar';
             inp.title = 'Sin filtro: se incluyen todas las granjas';
+            return;
         }
+
+        if (selCodes.length === 1) {
+            const cod = selCodes[0];
+            const g = cod.slice(0, 3);
+            const c = cod.slice(-3);
+            let nom = '';
+            const meta = (cfg.granjasMeta || []).find(function (m) { return m.granja === g; });
+            if (meta) nom = meta.nombre || '';
+            inp.value = g + (nom ? ' ' + nom : '') + ' - ' + c;
+            inp.title = '1 campaña seleccionada — Clic para cambiar';
+            return;
+        }
+
+        const granjas = Object.keys(campByGranja).length;
+        inp.value = granjas + ' granja(s), ' + selCodes.length + ' campaña(s)';
+        inp.title = selCodes.join(', ') + ' — Clic para cambiar';
     }
 
     function limpiarFiltros() {
@@ -259,18 +279,20 @@
         $('#mdp-mes-unico').val(y + '-' + m);
         $('#mdp-mes-inicio').val(y + '-01');
         $('#mdp-mes-fin').val(y + '-' + m);
-        $('#mrt-dsp-h-granja, #mrt-dsp-h-campania').val('');
+        selCodes = [];
+        campByGranja = {};
         syncVisibilidadPeriodo();
         syncGranjaDisplay();
     }
 
-    function getCampaniasUrl() {
-        const codes = (cfg.granjasMeta || []).map(function (g) { return g.granja || ''; }).filter(Boolean).join(',');
-        if (!codes) {
+    function getCampaniasUrl(codes) {
+        const list = (codes && codes.length)
+            ? codes
+            : (cfg.granjasMeta || []).map(function (g) { return g.granja || ''; }).filter(Boolean);
+        if (!list.length) {
             return '';
         }
-        const p = new URLSearchParams({ granjas: codes });
-        // Periodo del modal (Campañas presentes en: Desde/Hasta), no el filtro del dashboard.
+        const p = new URLSearchParams({ granjas: list.join(',') });
         if (window.GmcPeriodoCampanias) {
             window.GmcPeriodoCampanias.appendToSearchParams(p, 'mrt-dsp');
         } else {
@@ -290,46 +312,39 @@
         mrtDspGmc = window.GmcGranjasCampanias.create({
             prefix: 'mrt-dsp',
             shellPanelId: 'mrt-dsp-modal-granjas',
-            mode: 'single',
+            mode: 'multi',
+            requireGalpon: false,
             bodyOpenClass: 'mrt-dsp-modal-granjas-open',
             openTriggerId: 'mrt-dsp-granja-resumen',
-            getCodigoSeis: function () {
-                const g = ($('#mrt-dsp-h-granja').val() || '').trim();
-                const c = ($('#mrt-dsp-h-campania').val() || '').trim();
-                return g && c ? g + c : '';
+            getMultiState: function () {
+                return {
+                    selCodes: selCodes.slice(),
+                    campByGranja: JSON.parse(JSON.stringify(campByGranja)),
+                    galponByGranja: {}
+                };
             },
-            setCodigoSeis: function (cod) {
-                if (cod && cod.length >= 6) {
-                    $('#mrt-dsp-h-granja').val(cod.slice(0, 3));
-                    $('#mrt-dsp-h-campania').val(cod.slice(-3));
-                } else {
-                    $('#mrt-dsp-h-granja, #mrt-dsp-h-campania').val('');
-                }
-                syncGranjaDisplay();
+            setMultiState: function (st) {
+                setMultiState(st);
             },
-            cencosFetch: function () {
-                const url = getCampaniasUrl();
+            granjasFetch: function () {
+                return Promise.resolve(cfg.granjasMeta || []);
+            },
+            campaniasFetch: function (codes) {
+                const url = getCampaniasUrl(codes);
                 if (!url) {
-                    return Promise.resolve({ granjas: cfg.granjasMeta || [], campanias_por_granja: {}, aviso: '' });
+                    return Promise.resolve({});
                 }
                 return fetch(url, { credentials: 'same-origin', cache: 'no-store' })
                     .then(function (r) { return r.json(); })
                     .then(function (j) {
-                        return {
-                            granjas: cfg.granjasMeta || [],
-                            campanias_por_granja: (j && j.by_granja) ? j.by_granja : {},
-                            aviso: ''
-                        };
+                        return (j && j.by_granja) ? j.by_granja : {};
                     })
                     .catch(function () {
-                        return {
-                            granjas: cfg.granjasMeta || [],
-                            campanias_por_granja: {},
-                            aviso: 'Error al cargar campañas'
-                        };
+                        return {};
                     });
             },
-            onApply: function () {
+            onApply: function (st) {
+                setMultiState(st);
                 syncGranjaDisplay();
             }
         });

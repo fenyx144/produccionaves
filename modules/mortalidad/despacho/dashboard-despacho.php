@@ -78,13 +78,36 @@ $anio = date('Y');
         .mdp-panel-title span { font-weight: 500; color: #64748b; font-size: 0.8rem; }
         .mdp-tabla-wrap .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
         .mdp-tabla-wrap table.config-table { width: 100%; min-width: 280px; }
+        .mdp-tabla-wrap .table-wrapper {
+            max-height: min(70vh, 640px);
+            overflow: auto;
+            border-radius: 0.65rem;
+            border: 1px solid #e2e8f0;
+        }
+        .mdp-tabla-wrap table.mdp-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            box-shadow: 0 1px 0 rgba(255,255,255,0.15);
+        }
         .mdp-tabla-wrap .col-num { width: 3rem; text-align: center; }
         .mdp-tabla-wrap .col-pct, .mdp-tabla-wrap .col-qty { text-align: right; white-space: nowrap; }
-        .mdp-fila-total td { font-weight: 700; background: #eff6ff !important; color: #1e3a5f; }
+        .mdp-tabla-wrap tbody tr:nth-child(even):not(.mdp-fila-total) { background: #f8fafc; }
+        .mdp-tabla-wrap tbody tr:hover:not(.mdp-fila-total) { background: #f0f9ff; }
+        .mdp-fila-total td {
+            font-weight: 700;
+            background: linear-gradient(90deg, #dbeafe 0%, #e0f2fe 50%, #dbeafe 100%) !important;
+            color: #0c4a6e;
+            border-top: 2px solid #38bdf8;
+        }
+        .mdp-fila-sin-despacho td { color: #64748b; }
+        .mdp-fila-sin-despacho .col-qty, .mdp-fila-sin-despacho .col-pct { opacity: 0.85; }
         .mdp-empty {
             text-align: center; color: #94a3b8; padding: 2rem 1rem; font-size: 0.875rem;
         }
         .selector-display input { cursor: pointer; background: #fff; }
+        body.mrt-dsp-modal-granjas-open .tabla-listado-wrapper { filter: none; }
+        #mrt-dsp-modal-granjas .gmc-modal-inner { max-width: 920px; }
     </style>
 </head>
 <body class="bg-gray-50">
@@ -165,8 +188,6 @@ $anio = date('Y');
                             class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:ring-2 focus:ring-sky-500 hc-sel-granja"
                             readonly placeholder="Clic para seleccionar" value="">
                     </div>
-                    <input id="mrt-dsp-h-granja" type="hidden" value="">
-                    <input id="mrt-dsp-h-campania" type="hidden" value="">
                 </div>
             </div>
 
@@ -207,7 +228,7 @@ $anio = date('Y');
 <?php
 $gmc_id_prefix = 'mrt-dsp';
 $gmc_shell_panel_id = 'mrt-dsp-modal-granjas';
-$gmc_show_chk_todas = false;
+$gmc_show_chk_todas = true;
 $gmc_show_periodo_campanias = true;
 require __DIR__ . '/../../../core/lib/modals/modal_granjas_campanias.php';
 ?>
@@ -224,6 +245,7 @@ window.MORT_DESPACHO_CFG = {
                 'granja' => $gz['granja'] ?? '',
                 'nombre' => $gz['nombre_granja'] ?? $gz['nombre'] ?? '',
                 'zona' => $gz['zona'] ?? '',
+                'subzona' => $gz['subzona'] ?? '',
             ];
         }
         echo json_encode($gm, JSON_UNESCAPED_UNICODE);

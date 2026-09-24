@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../ventas/mortalidad_ventas_lib.php';
 require_once __DIR__ . '/../../../core/lib/gri/mortalidad_fact_aux_lib.php';
+require_once __DIR__ . '/../../../core/lib/hc/hc_granjas_repository.php';
 
 if (!function_exists('mort_despacho_filtros_defecto')) {
     /**
@@ -29,6 +30,7 @@ if (!function_exists('mort_despacho_filtros_defecto')) {
             'mesFin' => date('Y-12'),
             'granja' => '',
             'campania' => '',
+            'cencos_list' => [],
         ];
     }
 }
@@ -49,7 +51,49 @@ function mort_despacho_parse_filtros(array $input): array
     $gDigits = preg_replace('/\D/', '', $f['granja']) ?? '';
     $f['granja'] = $gDigits !== '' ? substr(str_pad($gDigits, 3, '0', STR_PAD_LEFT), 0, 3) : '';
 
+    $cencosRaw = trim((string) ($input['cencos'] ?? ''));
+    $f['cencos_list'] = mort_despacho_normalizar_lista_cencos($cencosRaw);
+
     return $f;
+}
+
+/**
+ * @return list<string> cencos de 6 dígitos
+ */
+function mort_despacho_normalizar_lista_cencos(string $raw): array
+{
+    $out = [];
+    foreach (preg_split('/\s*,\s*/', $raw) as $part) {
+        $digits = preg_replace('/\D/', '', (string) $part) ?? '';
+        if (strlen($digits) >= 6) {
+            $c = substr($digits, 0, 3) . substr($digits, -3);
+            $out[$c] = true;
+        }
+    }
+
+    return array_keys($out);
+}
+
+/**
+ * @param array<string, mixed> $filtros
+ */
+function mort_despacho_append_filtro_cencos(mysqli $conn, array $filtros, string $alias, array &$conds): void
+{
+    $a = preg_replace('/[^a-zA-Z0-9_]/', '', $alias) ?: 'mz';
+    $lista = $filtros['cencos_list'] ?? [];
+    if (!is_array($lista) || $lista === []) {
+        return;
+    }
+    $ins = [];
+    foreach ($lista as $c) {
+        $c = trim((string) $c);
+        if (preg_match('/^\d{6}$/', $c)) {
+            $ins[] = "'" . mysqli_real_escape_string($conn, $c) . "'";
+        }
+    }
+    if ($ins !== []) {
+        $conds[] = "TRIM({$a}.tcencos) IN (" . implode(',', $ins) . ')';
+    }
 }
 
 /**
@@ -122,16 +166,21 @@ function mort_despacho_where_base_movimientos(mysqli $conn, array $filtros, stri
         $conds[] = "DATE({$a}.tfectra) BETWEEN '{$desde}' AND '{$hasta}'";
     }
 
-    $granja = trim((string) ($filtros['granja'] ?? ''));
-    if ($granja !== '') {
-        $gEsc = mysqli_real_escape_string($conn, $granja);
-        $conds[] = "LEFT(TRIM({$a}.tcencos), 3) = '{$gEsc}'";
-    }
+    $lista = $filtros['cencos_list'] ?? [];
+    if (is_array($lista) && $lista !== []) {
+        mort_despacho_append_filtro_cencos($conn, $filtros, $a, $conds);
+    } else {
+        $granja = trim((string) ($filtros['granja'] ?? ''));
+        if ($granja !== '') {
+            $gEsc = mysqli_real_escape_string($conn, $granja);
+            $conds[] = "LEFT(TRIM({$a}.tcencos), 3) = '{$gEsc}'";
+        }
 
-    $campania = trim((string) ($filtros['campania'] ?? ''));
-    if ($campania !== '') {
-        $cEsc = mysqli_real_escape_string($conn, $campania);
-        $conds[] = "RIGHT(TRIM({$a}.tcencos), 3) = '{$cEsc}'";
+        $campania = trim((string) ($filtros['campania'] ?? ''));
+        if ($campania !== '') {
+            $cEsc = mysqli_real_escape_string($conn, $campania);
+            $conds[] = "RIGHT(TRIM({$a}.tcencos), 3) = '{$cEsc}'";
+        }
     }
 
     return implode(' AND ', $conds);
@@ -358,11 +407,125 @@ function mort_despacho_armar_etapas_respuesta(array $totales): array
 }
 
 /**
- * Resumen por fecha y cenco (granja + campaña): saca, muertos y %.
- *
- * @return list<array<string, mixed>>
+ * @return list<string> fechas Y-m-d en el rango (inclusive)
  */
-function mort_despacho_consultar_resumen_granjas(mysqli $conn, array $filtros): array
+function mort_despacho_fechas_en_rango(?array $rango): array
+{
+    if ($rango === null || empty($rango['desde']) || empty($rango['hasta'])) {
+        return [];
+    }
+    $fechas = [];
+    try {
+        $d = new DateTime($rango['desde']);
+        $fin = new DateTime($rango['hasta']);
+    } catch (Exception $e) {
+        return [];
+    }
+    while ($d <= $fin) {
+        $fechas[] = $d->format('Y-m-d');
+        $d->modify('+1 day');
+    }
+
+    return $fechas;
+}
+
+/**
+ * Catálogo de cencos (granja + campaña) para el resumen.
+ *
+ * @return list<array{cencos: string, granja: string, campania: string}>
+ */
+function mort_despacho_catalogo_cencos(mysqli $conn, array $filtros): array
+{
+    $lista = $filtros['cencos_list'] ?? [];
+    if (is_array($lista) && $lista !== []) {
+        $out = [];
+        foreach ($lista as $c) {
+            $c = trim((string) $c);
+            if (!preg_match('/^\d{6}$/', $c)) {
+                continue;
+            }
+            $out[] = [
+                'cencos' => $c,
+                'granja' => substr($c, 0, 3),
+                'campania' => substr($c, 3, 3),
+            ];
+        }
+        usort($out, static fn ($a, $b) => strcmp($a['cencos'], $b['cencos']));
+
+        return $out;
+    }
+
+    $granjaFiltro = trim((string) ($filtros['granja'] ?? ''));
+    $campaniaFiltro = trim((string) ($filtros['campania'] ?? ''));
+    $granjasHc = function_exists('hc_granjas_listar_para_selector')
+        ? hc_granjas_listar_para_selector($conn)
+        : [];
+    $granjasPermitidas = [];
+    foreach ($granjasHc as $row) {
+        $g3 = trim((string) ($row['granja'] ?? ''));
+        if ($g3 === '') {
+            continue;
+        }
+        if ($granjaFiltro !== '' && $g3 !== $granjaFiltro) {
+            continue;
+        }
+        $granjasPermitidas[$g3] = true;
+    }
+    if ($granjasPermitidas === []) {
+        return [];
+    }
+
+    $inGranjas = [];
+    foreach (array_keys($granjasPermitidas) as $g3) {
+        $inGranjas[] = "'" . mysqli_real_escape_string($conn, $g3) . "'";
+    }
+
+    $conds = [
+        "TRIM(g.tcencos) <> ''",
+        "LEFT(TRIM(g.tcencos), 1) = '6'",
+        "CHAR_LENGTH(TRIM(g.tcencos)) >= 6",
+        'LEFT(TRIM(g.tcencos), 3) IN (' . implode(',', $inGranjas) . ')',
+    ];
+    if ($campaniaFiltro !== '') {
+        $cEsc = mysqli_real_escape_string($conn, $campaniaFiltro);
+        $conds[] = "RIGHT(TRIM(g.tcencos), 3) = '{$cEsc}'";
+    }
+
+    $sql = '
+    SELECT DISTINCT
+        TRIM(g.tcencos) AS cencos,
+        LEFT(TRIM(g.tcencos), 3) AS granja,
+        RIGHT(TRIM(g.tcencos), 3) AS campania
+    FROM regcencosgalpones g
+    WHERE ' . implode(' AND ', $conds) . '
+    ORDER BY cencos ASC';
+
+    $res = mysqli_query($conn, $sql);
+    $out = [];
+    if ($res) {
+        while ($row = mysqli_fetch_assoc($res)) {
+            $cencos = trim((string) ($row['cencos'] ?? ''));
+            if ($cencos === '' || strlen($cencos) < 6) {
+                continue;
+            }
+            $c6 = substr($cencos, 0, 3) . substr($cencos, -3);
+            $out[] = [
+                'cencos' => $c6,
+                'granja' => trim((string) ($row['granja'] ?? substr($c6, 0, 3))),
+                'campania' => trim((string) ($row['campania'] ?? substr($c6, 3, 3))),
+            ];
+        }
+    }
+
+    return $out;
+}
+
+/**
+ * Estadísticas despacho por fecha + cenco (sin filtrar filas en cero).
+ *
+ * @return array<string, array{cantidad: float, muertos: int}>
+ */
+function mort_despacho_resumen_stats_map(mysqli $conn, array $filtros): array
 {
     $where = mort_despacho_where_base_movimientos($conn, $filtros, 'mz');
     $sqlDesp = mort_despacho_sql_es_despacho('mz');
@@ -370,75 +533,100 @@ function mort_despacho_consultar_resumen_granjas(mysqli $conn, array $filtros): 
 
     $sql = "
     SELECT
-        x.fecha,
-        x.cencos,
-        x.granja,
-        x.campania,
-        x.cantidad_despachada,
-        x.muertos
-    FROM (
-        SELECT
-            DATE(mz.tfectra) AS fecha,
-            TRIM(mz.tcencos) AS cencos,
-            LEFT(TRIM(mz.tcencos), 3) AS granja,
-            RIGHT(TRIM(mz.tcencos), 3) AS campania,
-            COALESCE(SUM(CASE WHEN TRIM(mz.tcodtra) = 'S700' THEN mz.tcantid ELSE 0 END), 0) AS cantidad_despachada,
-            COALESCE(SUM(
-                CASE
-                    WHEN TRIM(mz.tcodtra) = 'S808'
-                         AND {$sqlDesp}
-                         AND (
-                               (TRIM(mz.tcodigo) = 'P0001001' AND COALESCE(v.venta_m, 0) > 0)
-                            OR (TRIM(mz.tcodigo) = 'P0001002' AND COALESCE(v.venta_h, 0) > 0)
-                         )
-                    THEN mz.tcantid
-                    ELSE 0
-                END
-            ), 0) AS muertos
-        FROM movi_zonas mz
-        LEFT JOIN ({$subVenta}) v
-            ON v.fecha = DATE(mz.tfectra)
-           AND v.cencos = TRIM(mz.tcencos)
-           AND v.galpon = TRIM(CAST(mz.tcodint AS CHAR))
-        WHERE {$where}
-        GROUP BY DATE(mz.tfectra), TRIM(mz.tcencos), LEFT(TRIM(mz.tcencos), 3), RIGHT(TRIM(mz.tcencos), 3)
-        HAVING cantidad_despachada > 0
-    ) x
-    ORDER BY x.fecha DESC, x.cencos ASC
+        DATE(mz.tfectra) AS fecha,
+        TRIM(mz.tcencos) AS cencos,
+        COALESCE(SUM(CASE WHEN TRIM(mz.tcodtra) = 'S700' THEN mz.tcantid ELSE 0 END), 0) AS cantidad_despachada,
+        COALESCE(SUM(
+            CASE
+                WHEN TRIM(mz.tcodtra) = 'S808'
+                     AND {$sqlDesp}
+                     AND (
+                           (TRIM(mz.tcodigo) = 'P0001001' AND COALESCE(v.venta_m, 0) > 0)
+                        OR (TRIM(mz.tcodigo) = 'P0001002' AND COALESCE(v.venta_h, 0) > 0)
+                     )
+                THEN mz.tcantid
+                ELSE 0
+            END
+        ), 0) AS muertos
+    FROM movi_zonas mz
+    LEFT JOIN ({$subVenta}) v
+        ON v.fecha = DATE(mz.tfectra)
+       AND v.cencos = TRIM(mz.tcencos)
+       AND v.galpon = TRIM(CAST(mz.tcodint AS CHAR))
+    WHERE {$where}
+    GROUP BY DATE(mz.tfectra), TRIM(mz.tcencos)
     ";
 
+    $map = [];
     $res = mysqli_query($conn, $sql);
-    if (!$res) {
+    if ($res) {
+        while ($row = mysqli_fetch_assoc($res)) {
+            $fecha = (string) ($row['fecha'] ?? '');
+            $cencos = trim((string) ($row['cencos'] ?? ''));
+            if ($fecha === '' || $cencos === '') {
+                continue;
+            }
+            $c6 = strlen($cencos) >= 6 ? substr($cencos, 0, 3) . substr($cencos, -3) : $cencos;
+            $map[$fecha . '|' . $c6] = [
+                'cantidad' => (float) ($row['cantidad_despachada'] ?? 0),
+                'muertos' => (int) ($row['muertos'] ?? 0),
+            ];
+        }
+    }
+
+    return $map;
+}
+
+/**
+ * Resumen por fecha y cenco: todas las granjas/campañas del catálogo; 0 % si no hubo mort. despacho.
+ *
+ * @return list<array<string, mixed>>
+ */
+function mort_despacho_consultar_resumen_granjas(mysqli $conn, array $filtros): array
+{
+    $rango = mort_ventas_rango($filtros);
+    $fechas = mort_despacho_fechas_en_rango($rango);
+    if ($fechas === []) {
         return [];
     }
 
+    $catalogo = mort_despacho_catalogo_cencos($conn, $filtros);
+    if ($catalogo === []) {
+        return [];
+    }
+
+    $stats = mort_despacho_resumen_stats_map($conn, $filtros);
     $nombres = mort_despacho_nombres_granja($conn);
     $out = [];
     $n = 0;
-    while ($row = mysqli_fetch_assoc($res)) {
-        $n++;
-        $granja = trim((string) ($row['granja'] ?? ''));
-        $campania = trim((string) ($row['campania'] ?? ''));
-        $cencos = trim((string) ($row['cencos'] ?? ''));
-        $cant = (float) ($row['cantidad_despachada'] ?? 0);
-        $muertos = (int) ($row['muertos'] ?? 0);
-        $pct = $cant > 0 ? round($muertos * 100 / $cant, 2) : 0.0;
-        $nomBase = $nombres[$granja] ?? '';
-        $granjaLabel = $nomBase !== ''
-            ? $nomBase . ' C=' . $campania
-            : 'Granja ' . $granja . ' C=' . $campania;
 
-        $out[] = [
-            'numero' => $n,
-            'fecha' => (string) ($row['fecha'] ?? ''),
-            'cencos' => $cencos,
-            'granja' => $granjaLabel,
-            'granjaCod' => $granja,
-            'campania' => $campania,
-            'cantidad' => $cant,
-            'muertos' => $muertos,
-            'porcentaje' => $pct,
-        ];
+    foreach ($fechas as $fecha) {
+        foreach ($catalogo as $cat) {
+            $cencos = $cat['cencos'];
+            $granja = $cat['granja'];
+            $campania = $cat['campania'];
+            $key = $fecha . '|' . $cencos;
+            $st = $stats[$key] ?? ['cantidad' => 0.0, 'muertos' => 0];
+            $cant = (float) $st['cantidad'];
+            $muertos = (int) $st['muertos'];
+            $pct = $cant > 0 ? round($muertos * 100 / $cant, 2) : 0.0;
+            $nomBase = $nombres[$granja] ?? '';
+            $granjaLabel = $nomBase !== ''
+                ? $nomBase . ' C=' . $campania
+                : 'Granja ' . $granja . ' C=' . $campania;
+            $n++;
+            $out[] = [
+                'numero' => $n,
+                'fecha' => $fecha,
+                'cencos' => $cencos,
+                'granja' => $granjaLabel,
+                'granjaCod' => $granja,
+                'campania' => $campania,
+                'cantidad' => $cant,
+                'muertos' => $muertos,
+                'porcentaje' => $pct,
+            ];
+        }
     }
 
     return $out;
