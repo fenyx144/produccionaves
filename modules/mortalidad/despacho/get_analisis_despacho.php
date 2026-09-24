@@ -3,6 +3,31 @@
 declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');
+
+/**
+ * Devuelve JSON aunque haya fatal (timeout, memoria, etc.).
+ */
+register_shutdown_function(static function (): void {
+    $err = error_get_last();
+    if ($err === null) {
+        return;
+    }
+    $fatal = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR];
+    if (!in_array($err['type'], $fatal, true)) {
+        return;
+    }
+    if (!headers_sent()) {
+        http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
+    }
+    echo json_encode([
+        'success' => false,
+        'message' => 'Fatal: ' . ($err['message'] ?? 'error'),
+        'file' => isset($err['file']) ? basename((string) $err['file']) : '',
+        'line' => $err['line'] ?? 0,
+    ], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+});
+
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
@@ -13,61 +38,80 @@ if (empty($_SESSION['active'])) {
     exit;
 }
 
-require_once __DIR__ . '/mortalidad_despacho_lib.php';
-
-$conexionPath = null;
-foreach ([
-    __DIR__ . '/../../../../conexion_grs/conexion.php',
-    __DIR__ . '/../../../conexion_grs/conexion.php',
-] as $candidate) {
-    if (is_file($candidate)) {
-        $conexionPath = $candidate;
-        break;
-    }
-}
-if ($conexionPath === null) {
-    http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'No se encontró conexion_grs/conexion.php']);
-    exit;
-}
-require_once $conexionPath;
-
-$conn = conectar_joya_mysqli();
-if (!$conn) {
-    http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Error de conexión']);
-    exit;
-}
-
-mysqli_set_charset($conn, 'utf8');
-mysqli_query($conn, "SET time_zone = 'America/Lima'");
-
-$filtros = mort_despacho_parse_filtros(array_merge($_GET, $_POST));
-$rango = mort_ventas_rango($filtros);
-if ($rango === null) {
-    mysqli_close($conn);
-    http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Indique un periodo o rango de fechas válido.']);
-    exit;
-}
-
 try {
+    @set_time_limit(300);
+
+    require_once __DIR__ . '/mortalidad_despacho_lib.php';
+
+    $conexionPath = null;
+    foreach ([
+        __DIR__ . '/../../../../conexion_grs/conexion.php',
+        __DIR__ . '/../../../conexion_grs/conexion.php',
+    ] as $candidate) {
+        if (is_file($candidate)) {
+            $conexionPath = $candidate;
+            break;
+        }
+    }
+    if ($conexionPath === null) {
+        throw new RuntimeException('No se encontró conexion_grs/conexion.php');
+    }
+    require_once $conexionPath;
+
+    if (!function_exists('conectar_joya_mysqli')) {
+        throw new RuntimeException('Falta la función conectar_joya_mysqli() en conexion.php');
+    }
+
+    $conn = conectar_joya_mysqli();
+    if (!$conn) {
+        throw new RuntimeException('Error de conexión a la base de datos');
+    }
+
+    mysqli_set_charset($conn, 'utf8');
+    @mysqli_query($conn, "SET time_zone = 'America/Lima'");
+
+    $filtros = mort_despacho_parse_filtros(array_merge($_GET, $_POST));
+    $rango = mort_ventas_rango($filtros);
+    if ($rango === null) {
+        mysqli_close($conn);
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Indique un periodo o rango de fechas válido.']);
+        exit;
+    }
+
     $data = mort_despacho_analisis_completo($conn, $filtros);
-} catch (\Throwable $e) {
     mysqli_close($conn);
+
+    $payload = [
+        'success' => true,
+        'libRev' => defined('MORT_DESPACHO_LIB_REV') ? MORT_DESPACHO_LIB_REV : null,
+        'filtros' => $filtros,
+        'rango' => $data['rango'],
+        'causas' => $data['causas'],
+        'etapas' => $data['etapas'],
+        'resumenGranjas' => $data['resumenGranjas'],
+    ];
+
+    $jsonFlags = JSON_UNESCAPED_UNICODE;
+    if (defined('JSON_INVALID_UTF8_SUBSTITUTE')) {
+        $jsonFlags |= JSON_INVALID_UTF8_SUBSTITUTE;
+    }
+    $json = json_encode($payload, $jsonFlags);
+    if ($json === false) {
+        throw new RuntimeException('No se pudo serializar JSON: ' . json_last_error_msg());
+    }
+
+    echo $json;
+} catch (\Throwable $e) {
+    if (isset($conn) && $conn instanceof mysqli) {
+        @mysqli_close($conn);
+    }
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Error al consultar: ' . $e->getMessage()]);
-    exit;
+    echo json_encode([
+        'success' => false,
+        'libRev' => defined('MORT_DESPACHO_LIB_REV') ? MORT_DESPACHO_LIB_REV : null,
+        'message' => $e->getMessage(),
+        'file' => basename($e->getFile()),
+        'line' => $e->getLine(),
+    ], JSON_UNESCAPED_UNICODE | (defined('JSON_INVALID_UTF8_SUBSTITUTE') ? JSON_INVALID_UTF8_SUBSTITUTE : 0));
 }
-
-mysqli_close($conn);
-
-echo json_encode([
-    'success' => true,
-    'libRev' => defined('MORT_DESPACHO_LIB_REV') ? MORT_DESPACHO_LIB_REV : null,
-    'filtros' => $filtros,
-    'rango' => $data['rango'],
-    'causas' => $data['causas'],
-    'etapas' => $data['etapas'],
-    'resumenGranjas' => $data['resumenGranjas'],
-], JSON_UNESCAPED_UNICODE);

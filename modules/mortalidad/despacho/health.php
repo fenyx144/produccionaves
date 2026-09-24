@@ -2,7 +2,7 @@
 
 /**
  * Comprueba que mortalidad_despacho_lib.php carga en PHP 7.2+ (sin consultar BD).
- * GET .../despacho/health.php → {"ok":true,"php":"7.2.0","libRev":"20260924c"}
+ * GET .../despacho/health.php → {"ok":true,"php":"7.2.0","libRev":"20260924d"}
  */
 header('Content-Type: application/json; charset=utf-8');
 

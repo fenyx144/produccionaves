@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /** Revisión desplegable (health / JSON libRev). Compatible PHP >= 7.2. */
 if (!defined('MORT_DESPACHO_LIB_REV')) {
-    define('MORT_DESPACHO_LIB_REV', '20260924c');
+    define('MORT_DESPACHO_LIB_REV', '20260924d');
 }
 
 /**
@@ -248,7 +248,7 @@ function mort_despacho_causas_agregadas_sql(mysqli $conn, array $filtros): array
 
     $res = mysqli_query($conn, $sql);
     if (!$res) {
-        return [];
+        throw new RuntimeException('Consulta causas despacho: ' . mysqli_error($conn));
     }
 
     $rows = [];
@@ -652,19 +652,20 @@ function mort_despacho_resumen_stats_map(mysqli $conn, array $filtros): array
 
     $map = [];
     $res = mysqli_query($conn, $sql);
-    if ($res) {
-        while ($row = mysqli_fetch_assoc($res)) {
-            $fecha = (string) ($row['fecha'] ?? '');
-            $cencos = trim((string) ($row['cencos'] ?? ''));
-            if ($fecha === '' || $cencos === '') {
-                continue;
-            }
-            $c6 = strlen($cencos) >= 6 ? substr($cencos, 0, 3) . substr($cencos, -3) : $cencos;
-            $map[$fecha . '|' . $c6] = [
-                'cantidad' => (float) ($row['cantidad_despachada'] ?? 0),
-                'muertos' => (int) ($row['muertos'] ?? 0),
-            ];
+    if (!$res) {
+        throw new RuntimeException('Consulta resumen stats: ' . mysqli_error($conn));
+    }
+    while ($row = mysqli_fetch_assoc($res)) {
+        $fecha = (string) ($row['fecha'] ?? '');
+        $cencos = trim((string) ($row['cencos'] ?? ''));
+        if ($fecha === '' || $cencos === '') {
+            continue;
         }
+        $c6 = strlen($cencos) >= 6 ? substr($cencos, 0, 3) . substr($cencos, -3) : $cencos;
+        $map[$fecha . '|' . $c6] = [
+            'cantidad' => (float) ($row['cantidad_despachada'] ?? 0),
+            'muertos' => (int) ($row['muertos'] ?? 0),
+        ];
     }
 
     return $map;
@@ -687,6 +688,13 @@ function mort_despacho_consultar_resumen_granjas(mysqli $conn, array $filtros): 
     $catalogo = mort_despacho_catalogo_cencos($conn, $filtros, $rango);
     if ($catalogo === []) {
         return [];
+    }
+    $maxFilas = 8000;
+    if (count($fechas) * count($catalogo) > $maxFilas) {
+        throw new RuntimeException(
+            'El resumen generaría demasiadas filas (' . (count($fechas) * count($catalogo))
+            . '). Acote el periodo o seleccione granjas/campañas en el filtro.'
+        );
     }
     $nombres = mort_despacho_nombres_granja($conn);
     $out = [];
