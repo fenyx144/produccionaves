@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /** Revisión desplegable (health / JSON libRev). Compatible PHP >= 7.2. */
 if (!defined('MORT_DESPACHO_LIB_REV')) {
-    define('MORT_DESPACHO_LIB_REV', '20260925l');
+    define('MORT_DESPACHO_LIB_REV', '20260925m');
 }
 
 if (!defined('MORT_DESPACHO_MAX_KEYS_VENTA')) {
@@ -294,6 +294,109 @@ function mort_despacho_sql_from_claves_s700(mysqli $conn, array $filtros, string
     $a = preg_replace('/[^a-zA-Z0-9_]/', '', $alias) ?: 'k';
 
     return '(' . mort_despacho_sql_subquery_claves_s700($conn, $filtros) . ") AS {$a}";
+}
+
+/**
+ * CTE `k` (un solo escaneo S700 para causas + resumen en la misma sentencia).
+ *
+ * @param array<string, mixed> $filtros
+ */
+function mort_despacho_sql_with_claves_s700(mysqli $conn, array $filtros): string
+{
+    return 'WITH k AS (' . mort_despacho_sql_subquery_claves_s700($conn, $filtros) . ')';
+}
+
+/**
+ * @param array<string, mixed> $filtros
+ */
+function mort_despacho_sql_text_principal_unificado(mysqli $conn, array $filtros): string
+{
+    $with = mort_despacho_sql_with_claves_s700($conn, $filtros);
+    $onListado = mort_despacho_sql_on_s808_listado('mz', 'k');
+    $onResumen = mort_despacho_sql_on_s808_resumen('mz_r', 'k');
+
+    return $with . "
+    SELECT
+        'L' AS bloque,
+        LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0') AS cod_mort,
+        COALESCE(SUM(mz.tcantid), 0) AS cantidad,
+        CAST(NULL AS DATE) AS fecha,
+        CAST(NULL AS CHAR(6)) AS cenco6,
+        CAST(NULL AS DECIMAL(18,4)) AS cantidadDespachada,
+        CAST(NULL AS SIGNED) AS muertos
+    FROM k
+    INNER JOIN movi_zonas mz ON
+        {$onListado}
+    GROUP BY LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0')
+
+    UNION ALL
+
+    SELECT
+        'R' AS bloque,
+        CAST(NULL AS CHAR(2)) AS cod_mort,
+        CAST(NULL AS SIGNED) AS cantidad,
+        k.fecha,
+        k.cenco6,
+        SUM(k.venta_macho + k.venta_hembra) AS cantidadDespachada,
+        COALESCE(SUM(mz_r.tcantid), 0) AS muertos
+    FROM k
+    LEFT JOIN movi_zonas mz_r ON
+        {$onResumen}
+    GROUP BY k.fecha, k.cenco6
+    HAVING SUM(k.venta_macho + k.venta_hembra) > 0";
+}
+
+/**
+ * Una sentencia SQL (CTE k): causas listado + resumen cenco — un escaneo S700.
+ *
+ * @param array<string, mixed> $filtros
+ * @return array{causas: list<array{cod_mort: string, cantidad: int}>, resumen: list<array{fecha: string, cencos: string, cantidadDespachada: float, muertos: int}>}
+ */
+function mort_despacho_fetch_principal_unificado(mysqli $conn, array $filtros): array
+{
+    static $cache = [];
+    $cacheId = md5(json_encode(mort_despacho_filtros_clave_cache($filtros)));
+    if (isset($cache[$cacheId])) {
+        return $cache[$cacheId];
+    }
+
+    $sql = mort_despacho_sql_text_principal_unificado($conn, $filtros);
+    $res = mysqli_query($conn, $sql);
+    if (!$res) {
+        throw new RuntimeException('Consulta principal unificada: ' . mysqli_error($conn));
+    }
+
+    $causas = [];
+    $resumen = [];
+    while ($row = mysqli_fetch_assoc($res)) {
+        $bloque = (string) ($row['bloque'] ?? '');
+        if ($bloque === 'L') {
+            $causas[] = [
+                'cod_mort' => (string) ($row['cod_mort'] ?? ''),
+                'cantidad' => (int) ($row['cantidad'] ?? 0),
+            ];
+            continue;
+        }
+        if ($bloque === 'R') {
+            $resumen[] = [
+                'fecha' => (string) ($row['fecha'] ?? ''),
+                'cencos' => (string) ($row['cenco6'] ?? ''),
+                'cantidadDespachada' => (float) ($row['cantidadDespachada'] ?? 0),
+                'muertos' => (int) ($row['muertos'] ?? 0),
+            ];
+        }
+    }
+
+    if (count($resumen) > MORT_DESPACHO_MAX_KEYS_VENTA) {
+        throw new RuntimeException(
+            'Demasiados registros con despacho (' . count($resumen) . '). Acote el periodo o el filtro de granjas.'
+        );
+    }
+
+    $out = ['causas' => $causas, 'resumen' => $resumen];
+    $cache[$cacheId] = $out;
+
+    return $out;
 }
 
 /**
@@ -612,30 +715,7 @@ function mort_despacho_codigos_causa_sql_in(): string
  */
 function mort_despacho_causas_listado_agregadas_sql(mysqli $conn, array $filtros): array
 {
-    $fromClaves = mort_despacho_sql_from_claves_s700($conn, $filtros, 'k');
-    $on = mort_despacho_sql_on_s808_listado('mz', 'k');
-    $sql = "
-    SELECT
-        LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0') AS cod_mort,
-        COALESCE(SUM(mz.tcantid), 0) AS cantidad
-    FROM {$fromClaves}
-    INNER JOIN movi_zonas mz ON
-        {$on}
-    GROUP BY LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0')";
-
-    $res = mysqli_query($conn, $sql);
-    if (!$res) {
-        throw new RuntimeException('Consulta causas listado: ' . mysqli_error($conn));
-    }
-    $rows = [];
-    while ($row = mysqli_fetch_assoc($res)) {
-        $rows[] = [
-            'cod_mort' => (string) ($row['cod_mort'] ?? ''),
-            'cantidad' => (int) ($row['cantidad'] ?? 0),
-        ];
-    }
-
-    return $rows;
+    return mort_despacho_fetch_principal_unificado($conn, $filtros)['causas'];
 }
 
 /**
@@ -1176,48 +1256,7 @@ function mort_despacho_resumen_stats_map(mysqli $conn, array $filtros): array
  */
 function mort_despacho_resumen_cenco_sql_filas(mysqli $conn, array $filtros): array
 {
-    static $cache = [];
-    $key = md5(json_encode(mort_despacho_filtros_clave_cache($filtros)));
-    if (isset($cache[$key])) {
-        return $cache[$key];
-    }
-
-    $fromClaves = mort_despacho_sql_from_claves_s700($conn, $filtros, 'k');
-    $onS808 = mort_despacho_sql_on_s808_resumen('mz', 'k');
-    $sql = "
-    SELECT
-        k.fecha,
-        k.cenco6 AS cencos,
-        SUM(k.venta_macho + k.venta_hembra) AS cantidadDespachada,
-        COALESCE(SUM(mz.tcantid), 0) AS muertos
-    FROM {$fromClaves}
-    LEFT JOIN movi_zonas mz ON
-        {$onS808}
-    GROUP BY k.fecha, k.cenco6
-    HAVING SUM(k.venta_macho + k.venta_hembra) > 0
-    ORDER BY k.fecha DESC, k.cenco6 ASC";
-
-    $rows = [];
-    $res = mysqli_query($conn, $sql);
-    if (!$res) {
-        throw new RuntimeException('Consulta resumen cenco: ' . mysqli_error($conn));
-    }
-    while ($row = mysqli_fetch_assoc($res)) {
-        $rows[] = [
-            'fecha' => (string) ($row['fecha'] ?? ''),
-            'cencos' => (string) ($row['cencos'] ?? ''),
-            'cantidadDespachada' => (float) ($row['cantidadDespachada'] ?? 0),
-            'muertos' => (int) ($row['muertos'] ?? 0),
-        ];
-    }
-    if (count($rows) > MORT_DESPACHO_MAX_KEYS_VENTA) {
-        throw new RuntimeException(
-            'Demasiados registros con despacho (' . count($rows) . '). Acote el periodo o el filtro de granjas.'
-        );
-    }
-    $cache[$key] = $rows;
-
-    return $rows;
+    return mort_despacho_fetch_principal_unificado($conn, $filtros)['resumen'];
 }
 
 /**
@@ -1258,28 +1297,56 @@ function mort_despacho_consultar_resumen_granjas(mysqli $conn, array $filtros, ?
             ];
         }
     } else {
-        foreach (mort_despacho_resumen_cenco_sql_filas($conn, $filtros) as $row) {
-            $cantDesp = (float) ($row['cantidadDespachada'] ?? 0);
-            if ($cantDesp <= 0) {
-                continue;
-            }
-            $cencos = (string) ($row['cencos'] ?? '');
-            if (strlen($cencos) < 6) {
-                continue;
-            }
-            $muertos = (int) ($row['muertos'] ?? 0);
-            $filas[] = [
-                'fecha' => (string) ($row['fecha'] ?? ''),
-                'cencos' => $cencos,
-                'granjaCod' => substr($cencos, 0, 3),
-                'campania' => substr($cencos, 3, 3),
-                'cantidadDespachada' => $cantDesp,
-                'muertos' => $muertos,
-                'porcentajeMortDespacho' => round($muertos * 100 / $cantDesp, 2),
-            ];
-        }
+        return mort_despacho_consultar_resumen_granjas_desde_filas_cenco(
+            $conn,
+            mort_despacho_resumen_cenco_sql_filas($conn, $filtros)
+        );
     }
 
+    if ($filas === []) {
+        return [];
+    }
+
+    return mort_despacho_empaquetar_filas_resumen_ui($conn, $filas);
+}
+
+/**
+ * @param list<array{fecha: string, cencos: string, cantidadDespachada: float, muertos: int}> $filasCenco
+ * @return list<array<string, mixed>>
+ */
+function mort_despacho_consultar_resumen_granjas_desde_filas_cenco(mysqli $conn, array $filasCenco): array
+{
+    $filas = [];
+    foreach ($filasCenco as $row) {
+        $cantDesp = (float) ($row['cantidadDespachada'] ?? 0);
+        if ($cantDesp <= 0) {
+            continue;
+        }
+        $cencos = (string) ($row['cencos'] ?? '');
+        if (strlen($cencos) < 6) {
+            continue;
+        }
+        $muertos = (int) ($row['muertos'] ?? 0);
+        $filas[] = [
+            'fecha' => (string) ($row['fecha'] ?? ''),
+            'cencos' => $cencos,
+            'granjaCod' => substr($cencos, 0, 3),
+            'campania' => substr($cencos, 3, 3),
+            'cantidadDespachada' => $cantDesp,
+            'muertos' => $muertos,
+            'porcentajeMortDespacho' => round($muertos * 100 / $cantDesp, 2),
+        ];
+    }
+
+    return mort_despacho_empaquetar_filas_resumen_ui($conn, $filas);
+}
+
+/**
+ * @param list<array<string, mixed>> $filas
+ * @return list<array<string, mixed>>
+ */
+function mort_despacho_empaquetar_filas_resumen_ui(mysqli $conn, array $filas): array
+{
     if ($filas === []) {
         return [];
     }
@@ -1379,8 +1446,9 @@ function mort_despacho_analisis_bloque_principal(mysqli $conn, array $filtros): 
         throw new RuntimeException('Periodo inválido o incompleto.');
     }
 
-    $causas = mort_despacho_agregar_causas(mort_despacho_causas_listado_agregadas_sql($conn, $filtros));
-    $resumen = mort_despacho_consultar_resumen_granjas($conn, $filtros);
+    $principal = mort_despacho_fetch_principal_unificado($conn, $filtros);
+    $causas = mort_despacho_agregar_causas($principal['causas']);
+    $resumen = mort_despacho_consultar_resumen_granjas_desde_filas_cenco($conn, $principal['resumen']);
 
     return [
         'rango' => $rango,
@@ -1488,30 +1556,7 @@ function mort_despacho_export_sql_preview(mysqli $conn, array $filtros): array
 {
     $fromClaves = mort_despacho_sql_from_claves_s700($conn, $filtros, 'k');
     $sqlClavesS700 = mort_despacho_sql_subquery_claves_s700($conn, $filtros);
-    $onListado = mort_despacho_sql_on_s808_listado('mz', 'k');
-    $onResumen = mort_despacho_sql_on_s808_resumen('mz', 'k');
-
-    $sqlCausasListado = "
-SELECT
-    LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0') AS cod_mort,
-    COALESCE(SUM(mz.tcantid), 0) AS cantidad
-FROM {$fromClaves}
-INNER JOIN movi_zonas mz ON
-    {$onListado}
-GROUP BY LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0')";
-
-    $sqlResumenCenco = "
-SELECT
-    k.fecha,
-    k.cenco6 AS cencos,
-    SUM(k.venta_macho + k.venta_hembra) AS cantidadDespachada,
-    COALESCE(SUM(mz.tcantid), 0) AS muertos
-FROM {$fromClaves}
-LEFT JOIN movi_zonas mz ON
-    {$onResumen}
-GROUP BY k.fecha, k.cenco6
-HAVING SUM(k.venta_macho + k.venta_hembra) > 0
-ORDER BY k.fecha DESC, k.cenco6 ASC";
+    $sqlPrincipalUnificado = mort_despacho_sql_text_principal_unificado($conn, $filtros);
 
     $rango = mort_ventas_rango($filtros);
     $condsEtapas = ["c.tipoMortalidad = 'despacho'"];
@@ -1558,13 +1603,12 @@ WHERE {$whereEtapas}
             'periodoTipo' => $filtros['periodoTipo'] ?? '',
             'cencos_list' => $filtros['cencos_list'] ?? [],
         ],
-        'nota' => 'Principal: causas (listado JD4) + resumen cenco en 2 SQL; etapas aparte. Sin tabla temporal.',
+        'nota' => 'Principal: una SQL con WITH k (S700) + UNION causas/resumen. Requiere MySQL 8+ / MariaDB 10.2+ (CTE). Etapas aparte.',
         'sql' => [
-            '1_subquery_claves_s700' => $sqlClavesS700,
-            '2_causas_listado_jd4' => trim($sqlCausasListado),
-            '3_resumen_por_cenco' => trim($sqlResumenCenco),
-            '4_etapas_san_fact' => trim($sqlEtapas),
-            '5_nombres_granja' => "SELECT TRIM(codigo) AS codigo, TRIM(nombre) AS nombre FROM ccos WHERE codigo IN ('601000', ...); -- solo granjas del resumen",
+            '1_subquery_s700_solo' => $sqlClavesS700,
+            '2_principal_unificado_cte' => trim($sqlPrincipalUnificado),
+            '3_etapas_san_fact' => trim($sqlEtapas),
+            '4_nombres_granja' => "SELECT TRIM(codigo) AS codigo, TRIM(nombre) AS nombre FROM ccos WHERE codigo IN ('601000', ...); -- solo granjas del resumen",
         ],
         'join_on_s808_listado' => mort_despacho_sql_on_s808_listado('mz', 'k'),
         'join_on_s808_resumen' => mort_despacho_sql_on_s808_resumen('mz', 'k'),
