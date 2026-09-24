@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /** Revisión desplegable (health / JSON libRev). Compatible PHP >= 7.2. */
 if (!defined('MORT_DESPACHO_LIB_REV')) {
-    define('MORT_DESPACHO_LIB_REV', '20260925m');
+    define('MORT_DESPACHO_LIB_REV', '20260925n');
 }
 
 if (!defined('MORT_DESPACHO_MAX_KEYS_VENTA')) {
@@ -297,25 +297,18 @@ function mort_despacho_sql_from_claves_s700(mysqli $conn, array $filtros, string
 }
 
 /**
- * CTE `k` (un solo escaneo S700 para causas + resumen en la misma sentencia).
+ * MySQL 5.7: una sentencia, UNION ALL (sin WITH). Subconsulta S700 en cada rama.
  *
- * @param array<string, mixed> $filtros
- */
-function mort_despacho_sql_with_claves_s700(mysqli $conn, array $filtros): string
-{
-    return 'WITH k AS (' . mort_despacho_sql_subquery_claves_s700($conn, $filtros) . ')';
-}
-
-/**
  * @param array<string, mixed> $filtros
  */
 function mort_despacho_sql_text_principal_unificado(mysqli $conn, array $filtros): string
 {
-    $with = mort_despacho_sql_with_claves_s700($conn, $filtros);
+    $fromClavesListado = mort_despacho_sql_from_claves_s700($conn, $filtros, 'k');
+    $fromClavesResumen = mort_despacho_sql_from_claves_s700($conn, $filtros, 'k');
     $onListado = mort_despacho_sql_on_s808_listado('mz', 'k');
     $onResumen = mort_despacho_sql_on_s808_resumen('mz_r', 'k');
 
-    return $with . "
+    return "
     SELECT
         'L' AS bloque,
         LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0') AS cod_mort,
@@ -324,7 +317,7 @@ function mort_despacho_sql_text_principal_unificado(mysqli $conn, array $filtros
         CAST(NULL AS CHAR(6)) AS cenco6,
         CAST(NULL AS DECIMAL(18,4)) AS cantidadDespachada,
         CAST(NULL AS SIGNED) AS muertos
-    FROM k
+    FROM {$fromClavesListado}
     INNER JOIN movi_zonas mz ON
         {$onListado}
     GROUP BY LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0')
@@ -339,7 +332,7 @@ function mort_despacho_sql_text_principal_unificado(mysqli $conn, array $filtros
         k.cenco6,
         SUM(k.venta_macho + k.venta_hembra) AS cantidadDespachada,
         COALESCE(SUM(mz_r.tcantid), 0) AS muertos
-    FROM k
+    FROM {$fromClavesResumen}
     LEFT JOIN movi_zonas mz_r ON
         {$onResumen}
     GROUP BY k.fecha, k.cenco6
@@ -347,7 +340,7 @@ function mort_despacho_sql_text_principal_unificado(mysqli $conn, array $filtros
 }
 
 /**
- * Una sentencia SQL (CTE k): causas listado + resumen cenco — un escaneo S700.
+ * Una sentencia SQL: causas listado + resumen cenco (compatible MySQL 5.7).
  *
  * @param array<string, mixed> $filtros
  * @return array{causas: list<array{cod_mort: string, cantidad: int}>, resumen: list<array{fecha: string, cencos: string, cantidadDespachada: float, muertos: int}>}
@@ -1603,10 +1596,10 @@ WHERE {$whereEtapas}
             'periodoTipo' => $filtros['periodoTipo'] ?? '',
             'cencos_list' => $filtros['cencos_list'] ?? [],
         ],
-        'nota' => 'Principal: una SQL con WITH k (S700) + UNION causas/resumen. Requiere MySQL 8+ / MariaDB 10.2+ (CTE). Etapas aparte.',
+        'nota' => 'Principal: una SQL MySQL 5.7 (UNION ALL; subconsulta S700 en cada rama). Etapas aparte.',
         'sql' => [
             '1_subquery_s700_solo' => $sqlClavesS700,
-            '2_principal_unificado_cte' => trim($sqlPrincipalUnificado),
+            '2_principal_unificado_union' => trim($sqlPrincipalUnificado),
             '3_etapas_san_fact' => trim($sqlEtapas),
             '4_nombres_granja' => "SELECT TRIM(codigo) AS codigo, TRIM(nombre) AS nombre FROM ccos WHERE codigo IN ('601000', ...); -- solo granjas del resumen",
         ],
