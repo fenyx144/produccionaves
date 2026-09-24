@@ -64,6 +64,7 @@ mysqli_close($conn);
 
 echo json_encode([
     'success' => true,
+    'libRev' => defined('MORT_DESPACHO_LIB_REV') ? MORT_DESPACHO_LIB_REV : null,
     'filtros' => $filtros,
     'rango' => $data['rango'],
     'causas' => $data['causas'],

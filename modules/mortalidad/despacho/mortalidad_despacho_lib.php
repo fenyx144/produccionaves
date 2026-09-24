@@ -2,6 +2,11 @@
 
 declare(strict_types=1);
 
+/** Revisión desplegable (health / JSON libRev). Compatible PHP >= 7.2. */
+if (!defined('MORT_DESPACHO_LIB_REV')) {
+    define('MORT_DESPACHO_LIB_REV', '20260924c');
+}
+
 /**
  * Análisis de mortalidad en el proceso de despacho (causas, etapas y resumen por granja).
  *
@@ -450,7 +455,7 @@ function mort_despacho_granjas_hc_cached(mysqli $conn): array
 /**
  * Catálogo explícito desde filtro multi (cencos).
  *
- * @return list<array{cencos: string, granja: string, campania: string}>
+ * @return array<int, array<string, string>>
  */
 function mort_despacho_catalogo_desde_lista_cencos(array $filtros): array
 {
