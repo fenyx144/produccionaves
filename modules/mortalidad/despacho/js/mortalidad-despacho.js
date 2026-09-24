@@ -157,6 +157,24 @@
         return base;
     }
 
+    function rangoMesActualYmd() {
+        const hoy = new Date();
+        const y = hoy.getFullYear();
+        const m = hoy.getMonth();
+        const mm = String(m + 1).padStart(2, '0');
+        const ultimo = new Date(y, m + 1, 0);
+        return {
+            desde: y + '-' + mm + '-01',
+            hasta: y + '-' + mm + '-' + String(ultimo.getDate()).padStart(2, '0')
+        };
+    }
+
+    function aplicarRangoMesActualEntreFechas() {
+        const r = rangoMesActualYmd();
+        $('#mdp-fecha-inicio').val(r.desde);
+        $('#mdp-fecha-fin').val(r.hasta);
+    }
+
     function syncVisibilidadPeriodo() {
         const t = ($('#mdp-periodo-tipo').val() || '').trim();
         $('.mdp-bloque-periodo').addClass('hidden');
@@ -388,10 +406,9 @@
         const m = String(hoy.getMonth() + 1).padStart(2, '0');
         const d = String(hoy.getDate()).padStart(2, '0');
         const hoyStr = y + '-' + m + '-' + d;
-        $('#mdp-periodo-tipo').val('POR_FECHA');
+        $('#mdp-periodo-tipo').val('POR_MES');
         $('#mdp-fecha-unica').val(hoyStr);
-        $('#mdp-fecha-inicio').val(hoyStr);
-        $('#mdp-fecha-fin').val(hoyStr);
+        aplicarRangoMesActualEntreFechas();
         $('#mdp-mes-unico').val(y + '-' + m);
         $('#mdp-mes-inicio').val(y + '-01');
         $('#mdp-mes-fin').val(y + '-' + m);
@@ -474,7 +491,13 @@
             $('#iconoFiltrosMdp').toggleClass('rotate-180');
         });
 
-        $('#mdp-periodo-tipo').on('change', syncVisibilidadPeriodo);
+        $('#mdp-periodo-tipo').on('change', function () {
+            const t = ($(this).val() || '').trim();
+            if (t === 'ENTRE_FECHAS') {
+                aplicarRangoMesActualEntreFechas();
+            }
+            syncVisibilidadPeriodo();
+        });
         $('#mdp-btn-consultar').on('click', cargarAnalisis);
         $('#mdp-btn-limpiar').on('click', function () {
             limpiarFiltros();

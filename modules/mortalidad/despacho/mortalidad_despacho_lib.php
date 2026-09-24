@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /** Revisión desplegable (health / JSON libRev). Compatible PHP >= 7.2. */
 if (!defined('MORT_DESPACHO_LIB_REV')) {
-    define('MORT_DESPACHO_LIB_REV', '20260925b');
+    define('MORT_DESPACHO_LIB_REV', '20260925c');
 }
 
 /** Escapa valor SQL (PHP 7.2: mysqli_real_escape_string exige string; claves numéricas de granja pueden ser int). */
@@ -134,13 +134,13 @@ if (!function_exists('mort_despacho_filtros_defecto')) {
     function mort_despacho_filtros_defecto(): array
     {
         return [
-            'periodoTipo' => 'POR_FECHA',
+            'periodoTipo' => 'POR_MES',
             'fechaUnica' => date('Y-m-d'),
-            'fechaInicio' => '',
-            'fechaFin' => '',
-            'mesUnico' => '',
-            'mesInicio' => date('Y-01'),
-            'mesFin' => date('Y-12'),
+            'fechaInicio' => date('Y-m-01'),
+            'fechaFin' => date('Y-m-t'),
+            'mesUnico' => date('Y-m'),
+            'mesInicio' => date('Y-m'),
+            'mesFin' => date('Y-m'),
             'granja' => '',
             'campania' => '',
             'cencos_list' => [],

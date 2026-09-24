@@ -20,6 +20,8 @@ $filtrosApiUrl = $modMortUrl . '/listado/get_opciones_filtros.php';
 $hoy = date('Y-m-d');
 $mesActual = date('Y-m');
 $anio = date('Y');
+$primerDiaMes = date('Y-m-01');
+$ultimoDiaMes = date('Y-m-t');
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -116,14 +118,14 @@ $anio = date('Y');
                     </label>
                     <select id="mdp-periodo-tipo"
                         class="w-full px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 text-sm cursor-pointer">
-                        <option value="POR_FECHA" selected>Por fecha</option>
+                        <option value="POR_FECHA">Por fecha</option>
                         <option value="ENTRE_FECHAS">Entre fechas</option>
-                        <option value="POR_MES">Por mes</option>
+                        <option value="POR_MES" selected>Por mes</option>
                         <option value="ENTRE_MESES">Entre meses</option>
                         <option value="ULTIMA_SEMANA">Última semana</option>
                     </select>
                 </div>
-                <div id="mdp-bloque-fecha-unica" class="mdp-bloque-periodo flex-shrink-0 min-w-[200px]">
+                <div id="mdp-bloque-fecha-unica" class="mdp-bloque-periodo hidden flex-shrink-0 min-w-[200px]">
                     <label class="block text-sm font-medium text-gray-700 mb-1">
                         <i class="fas fa-calendar-day mr-1 text-sky-600"></i> Fecha
                     </label>
@@ -133,16 +135,16 @@ $anio = date('Y');
                 <div id="mdp-bloque-rango-fechas" class="mdp-bloque-periodo hidden flex-shrink-0 flex items-end gap-2">
                     <div class="min-w-[180px]">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Desde</label>
-                        <input id="mdp-fecha-inicio" type="date" value="<?php echo htmlspecialchars($hoy, ENT_QUOTES, 'UTF-8'); ?>"
+                        <input id="mdp-fecha-inicio" type="date" value="<?php echo htmlspecialchars($primerDiaMes, ENT_QUOTES, 'UTF-8'); ?>"
                             class="w-full px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 text-sm">
                     </div>
                     <div class="min-w-[180px]">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
-                        <input id="mdp-fecha-fin" type="date" value="<?php echo htmlspecialchars($hoy, ENT_QUOTES, 'UTF-8'); ?>"
+                        <input id="mdp-fecha-fin" type="date" value="<?php echo htmlspecialchars($ultimoDiaMes, ENT_QUOTES, 'UTF-8'); ?>"
                             class="w-full px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 text-sm">
                     </div>
                 </div>
-                <div id="mdp-bloque-mes-unico" class="mdp-bloque-periodo hidden flex-shrink-0 min-w-[200px]">
+                <div id="mdp-bloque-mes-unico" class="mdp-bloque-periodo flex-shrink-0 min-w-[200px]">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Mes</label>
                     <input id="mdp-mes-unico" type="month" value="<?php echo htmlspecialchars($mesActual, ENT_QUOTES, 'UTF-8'); ?>"
                         class="w-full px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 text-sm">
