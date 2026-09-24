@@ -4,9 +4,9 @@
 
 SET NAMES utf8mb4;
 
--- Clave de empresa usada por AES_ENCRYPT en el login.
-INSERT INTO conempre (epre, enom) VALUES ('RS', 'CLAVE_DESARROLLO_RS')
-    ON DUPLICATE KEY UPDATE enom = VALUES(enom);
+-- Clave de empresa usada por AES_ENCRYPT en el login; eano = año contable abierto.
+INSERT INTO conempre (epre, enom, eano) VALUES ('RS', 'CLAVE_DESARROLLO_RS', '2026')
+    ON DUPLICATE KEY UPDATE enom = VALUES(enom), eano = VALUES(eano);
 
 -- Usuario demo. La contraseña se guarda igual que en el ERP:
 --   LEFT(AES_ENCRYPT('1234', enom), 8)
@@ -42,23 +42,24 @@ INSERT INTO pi_dim_detalles (id_granja, id_caracteristica, dato) VALUES
     ('601', 1, 'NORTE'),
     ('601', 2, 'SUBZONA-A');
 
--- Cabecera del documento de zonas (mark JD4 = despacho) para los filtros.
+-- Cabecera del documento de zonas (mark JD4 = despacho).
+-- external_id enlaza con san_fact_mortalidad_cab para el módulo Listado.
 DELETE FROM cabe_zonas WHERE mark = 'JD4' AND tserie = 'S001' AND tnumfac = '00000001';
-INSERT INTO cabe_zonas (mark, treg, tdoc, tserie, tnumfac) VALUES
-    ('JD4', '001', 'FD', 'S001', '00000001');
+INSERT INTO cabe_zonas (mark, treg, tdoc, tserie, tnumfac, external_id, tfecrem, tfectra, tuser, tdate, ttime, observaciones) VALUES
+    ('JD4', '001', 'FD', 'S001', '00000001', 'cab-despacho-demo-0001', '2026-09-15', '2026-09-15', 'ADMIN', '2026-09-15', '09:30:00', 'Despacho demo');
 
 -- Movimientos de zonas para el 2026-09-15, cenco 601001, galpón 1.
 -- Todos enlazan con la cabecera cabe_zonas de arriba (mark/treg/tdoc/tserie/tnumfac).
 DELETE FROM movi_zonas WHERE tcencos = '601001';
-INSERT INTO movi_zonas (tcodigo, tcodtra, tfectra, tcencos, tcodint, tcantid, tcategoria, flujo, tcod_mortgrs, mark, treg, tdoc, tserie, tnumfac) VALUES
+INSERT INTO movi_zonas (tcodigo, tcodtra, tfectra, tcencos, tcodint, tcantid, tcategoria, flujo, tcod_mortgrs, tedad, mark, treg, tdoc, tserie, tnumfac) VALUES
     -- Ventas del día (S700): hay salida de machos y hembras.
-    ('P0001001', 'S700', '2026-09-15 08:00:00', '601001', '1', 1000, 'DESPACHO', 'DESPACHO', NULL, 'JD4', '001', 'FD', 'S001', '00000001'),
-    ('P0001002', 'S700', '2026-09-15 08:10:00', '601001', '1',  800, 'DESPACHO', 'DESPACHO', NULL, 'JD4', '001', 'FD', 'S001', '00000001'),
+    ('P0001001', 'S700', '2026-09-15 08:00:00', '601001', '1', 1000, 'DESPACHO', 'DESPACHO', NULL, 45, 'JD4', '001', 'FD', 'S001', '00000001'),
+    ('P0001002', 'S700', '2026-09-15 08:10:00', '601001', '1',  800, 'DESPACHO', 'DESPACHO', NULL, 45, 'JD4', '001', 'FD', 'S001', '00000001'),
     -- Mortalidad de despacho (S808) por causa.
-    ('P0001001', 'S808', '2026-09-15 09:00:00', '601001', '1',   10, 'DESPACHO', 'DESPACHO', '05', 'JD4', '001', 'FD', 'S001', '00000001'),
-    ('P0001001', 'S808', '2026-09-15 09:05:00', '601001', '1',    5, 'DESPACHO', 'DESPACHO', '14', 'JD4', '001', 'FD', 'S001', '00000001'),
-    ('P0001002', 'S808', '2026-09-15 09:10:00', '601001', '1',    3, 'DESPACHO', 'DESPACHO', '15', 'JD4', '001', 'FD', 'S001', '00000001'),
-    ('P0001001', 'S808', '2026-09-15 09:15:00', '601001', '1',    2, 'DESPACHO', 'DESPACHO', '18', 'JD4', '001', 'FD', 'S001', '00000001');
+    ('P0001001', 'S808', '2026-09-15 09:00:00', '601001', '1',   10, 'DESPACHO', 'DESPACHO', '05', 45, 'JD4', '001', 'FD', 'S001', '00000001'),
+    ('P0001001', 'S808', '2026-09-15 09:05:00', '601001', '1',    5, 'DESPACHO', 'DESPACHO', '14', 45, 'JD4', '001', 'FD', 'S001', '00000001'),
+    ('P0001002', 'S808', '2026-09-15 09:10:00', '601001', '1',    3, 'DESPACHO', 'DESPACHO', '15', 45, 'JD4', '001', 'FD', 'S001', '00000001'),
+    ('P0001001', 'S808', '2026-09-15 09:15:00', '601001', '1',    2, 'DESPACHO', 'DESPACHO', '18', 45, 'JD4', '001', 'FD', 'S001', '00000001');
 
 -- Espejo de etapas del proceso de despacho (san_fact_mortalidad_*).
 DELETE d FROM san_fact_mortalidad_det d

@@ -27,6 +27,7 @@ DROP TABLE IF EXISTS conempre;
 CREATE TABLE conempre (
     epre VARCHAR(4)   NOT NULL,
     enom VARCHAR(120) NOT NULL,
+    eano VARCHAR(4)   NULL,           -- año contable abierto
     PRIMARY KEY (epre)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -67,6 +68,7 @@ CREATE TABLE movi_zonas (
     tcategoria   VARCHAR(30)  NULL,
     flujo        VARCHAR(30)  NULL,
     tcod_mortgrs VARCHAR(10)  NULL,              -- causa de mortalidad
+    tedad        INT          NULL,              -- edad (días) del lote
     -- Claves de enlace con la cabecera del documento (cabe_zonas).
     mark         VARCHAR(10)  NULL,
     treg         VARCHAR(10)  NULL,
@@ -76,14 +78,21 @@ CREATE TABLE movi_zonas (
     KEY idx_mz_busqueda (tcodtra, tcodigo, tcencos)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Cabecera de documentos de zonas (mortalidad_listado_lib.php: filtros de granja).
+-- Cabecera de documentos de zonas (mortalidad_listado_lib.php).
 DROP TABLE IF EXISTS cabe_zonas;
 CREATE TABLE cabe_zonas (
-    mark    VARCHAR(10) NOT NULL,   -- JI1/JT2/JP3/JD4
-    treg    VARCHAR(10) NOT NULL,
-    tdoc    VARCHAR(10) NOT NULL,
-    tserie  VARCHAR(12) NOT NULL,
-    tnumfac VARCHAR(12) NOT NULL,
+    mark          VARCHAR(10) NOT NULL,   -- JI1/JT2/JP3/JD4
+    treg          VARCHAR(10) NOT NULL,
+    tdoc          VARCHAR(10) NOT NULL,
+    tserie        VARCHAR(12) NOT NULL,
+    tnumfac       VARCHAR(12) NOT NULL,
+    external_id   CHAR(36)    NULL,       -- enlaza con san_fact_mortalidad_cab.id
+    tfecrem       DATE        NULL,       -- fecha de registro
+    tfectra       DATE        NULL,       -- fecha de llegada
+    tuser         VARCHAR(50) NULL,       -- usuario de registro
+    tdate         DATE        NULL,
+    ttime         TIME        NULL,
+    observaciones TEXT        NULL,
     KEY idx_cz (mark, treg, tdoc, tserie, tnumfac)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -143,6 +152,23 @@ CREATE TABLE san_fact_mortalidad_det (
     procesoEstibar     INT NOT NULL DEFAULT 0,
     PRIMARY KEY (id),
     KEY idx_det_cab (cabId)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Cierres de periodo contable (mortalidad_listado_lib: fechas cerradas).
+-- Vacías = ningún periodo cerrado en desarrollo.
+DROP TABLE IF EXISTS indi;
+CREATE TABLE indi (
+    fecha  VARCHAR(7) NOT NULL,   -- YYYY-MM
+    cierre CHAR(1)    NULL,        -- 'C' = cerrado
+    PRIMARY KEY (fecha)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+DROP TABLE IF EXISTS dola;
+CREATE TABLE dola (
+    fecha     VARCHAR(10) NOT NULL,  -- YYYY-MM-DD
+    cerra     CHAR(1)     NULL,      -- 'C' = cerrado
+    cerrajoya CHAR(1)     NULL,      -- 'C' = cerrado en Joya
+    PRIMARY KEY (fecha)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------------------------------------------------------------------
