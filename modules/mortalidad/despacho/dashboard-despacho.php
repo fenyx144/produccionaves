@@ -224,7 +224,7 @@ $ultimoDiaMes = date('Y-m-t');
             <div class="tabla-listado-wrapper bg-white rounded-xl shadow-md p-5 mdp-tabla-wrap">
                 <h4 class="mdp-panel-title" id="mdp-titulo-etapas">Mortalidad por etapa del proceso</h4>
                 <div class="table-wrapper" id="mdp-tabla-etapas">
-                    <p class="mdp-empty">Use Buscar para cargar el análisis.</p>
+                    <p class="mdp-empty">Pulse Buscar para cargar etapas.</p>
                 </div>
             </div>
         </div>
@@ -232,7 +232,7 @@ $ultimoDiaMes = date('Y-m-t');
         <div class="tabla-listado-wrapper bg-white rounded-xl shadow-md p-5 mb-4 mdp-tabla-wrap">
             <h4 class="mdp-panel-title" id="mdp-titulo-resumen">Resumen de mortalidad por granja</h4>
             <div class="table-wrapper" id="mdp-tabla-resumen">
-                <p class="mdp-empty">Use Buscar para cargar el resumen.</p>
+                <p class="mdp-empty">Pulse Buscar para cargar el resumen.</p>
             </div>
         </div>
         </div>

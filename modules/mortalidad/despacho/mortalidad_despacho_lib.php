@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /** Revisión desplegable (health / JSON libRev). Compatible PHP >= 7.2. */
 if (!defined('MORT_DESPACHO_LIB_REV')) {
-    define('MORT_DESPACHO_LIB_REV', '20260925g');
+    define('MORT_DESPACHO_LIB_REV', '20260925h');
 }
 
 if (!defined('MORT_DESPACHO_MAX_KEYS_VENTA')) {
@@ -359,17 +359,11 @@ function mort_despacho_ventas_agrupada_filas(mysqli $conn, array $filtros): arra
         COALESCE(SUM(CASE WHEN mz.tcodigo = {$macho} THEN mz.tcantid ELSE 0 END), 0) AS mort_macho,
         COALESCE(SUM(CASE WHEN mz.tcodigo = {$hembra} THEN mz.tcantid ELSE 0 END), 0) AS mort_hembra,
         CASE WHEN k.venta_macho > 0 THEN COALESCE(SUM(CASE WHEN mz.tcodigo = {$macho}
-            AND (
-                UPPER(TRIM(COALESCE(mz.tcategoria, ''))) = 'DESPACHO'
-                OR UPPER(TRIM(COALESCE(mz.flujo, ''))) = 'DESPACHO'
-                OR LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0') IN {$causasDespacho}
-            ) THEN mz.tcantid ELSE 0 END), 0) ELSE 0 END AS mort_desp_macho,
+            AND LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0') IN {$causasDespacho}
+            THEN mz.tcantid ELSE 0 END), 0) ELSE 0 END AS mort_desp_macho,
         CASE WHEN k.venta_hembra > 0 THEN COALESCE(SUM(CASE WHEN mz.tcodigo = {$hembra}
-            AND (
-                UPPER(TRIM(COALESCE(mz.tcategoria, ''))) = 'DESPACHO'
-                OR UPPER(TRIM(COALESCE(mz.flujo, ''))) = 'DESPACHO'
-                OR LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0') IN {$causasDespacho}
-            ) THEN mz.tcantid ELSE 0 END), 0) ELSE 0 END AS mort_desp_hembra
+            AND LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0') IN {$causasDespacho}
+            THEN mz.tcantid ELSE 0 END), 0) ELSE 0 END AS mort_desp_hembra
     FROM `{$t}` k
     LEFT JOIN movi_zonas mz ON
         mz.tcodtra = 'S808'
@@ -398,9 +392,9 @@ function mort_despacho_ventas_agrupada_filas(mysqli $conn, array $filtros): arra
 /**
  * Análisis de mortalidad en el proceso de despacho (causas, etapas y resumen por granja).
  *
- * Criterio de mortalidad de despacho: mismo que Ventas (tcategoria/flujo DESPACHO o
- * tcod_mortgrs en 05, 14, 15, 17, 18, 19), con la regla de negocio de que solo
- * cuenta si hubo venta (S700) del mismo sexo ese día en el mismo cenco/galpón.
+ * Criterio de mortalidad de despacho: S808 en pollos P0001001/P0001002 con
+ * tcod_mortgrs en 05, 14, 15, 17, 18, 19. Solo cuenta si hubo S700 del mismo
+ * sexo ese día en el mismo cenco + galpón.
  */
 
 require_once __DIR__ . '/../ventas/mortalidad_ventas_lib.php';
@@ -572,23 +566,22 @@ function mort_despacho_etapas_display(): array
     ];
 }
 
-/** Códigos de causa considerados despacho (alineado con mortalidad_ventas_lib). */
+/** Códigos de causa de mortalidad en despacho (S808 pollos P0001001/P0001002). */
 function mort_despacho_codigos_causa_sql_in(): string
 {
     return "('05','14','15','17','18','19')";
 }
 
 /**
- * Condición SQL: fila movi_zonas es mortalidad de despacho.
+ * Condición SQL: fila movi_zonas S808 es mortalidad de despacho (pollos + causas).
  */
 function mort_despacho_sql_es_despacho(string $alias = 'mz'): string
 {
     $a = preg_replace('/[^a-zA-Z0-9_]/', '', $alias) ?: 'mz';
     $in = mort_despacho_codigos_causa_sql_in();
 
-    return "(UPPER(TRIM(COALESCE({$a}.tcategoria, ''))) = 'DESPACHO'
-        OR UPPER(TRIM(COALESCE({$a}.flujo, ''))) = 'DESPACHO'
-        OR LPAD(TRIM(COALESCE({$a}.tcod_mortgrs, '')), 2, '0') IN {$in})";
+    return "(TRIM({$a}.tcodigo) IN ('P0001001','P0001002')
+        AND LPAD(TRIM(COALESCE({$a}.tcod_mortgrs, '')), 2, '0') IN {$in})";
 }
 
 /**
@@ -1118,7 +1111,7 @@ function mort_despacho_sql_filtro_cencos_en_x(mysqli $conn, array $filtros): str
 }
 
 /**
- * Resumen stats desde filas Ventas (una sola query mort_ventas_sql_agrupada por request).
+ * Resumen por fecha + cenco6: suma todos los galpones del cenco (tabla 3).
  *
  * @return array<string, array{cantidadDespachada: float, muertos: int}>
  */
@@ -1151,7 +1144,7 @@ function mort_despacho_resumen_stats_map(mysqli $conn, array $filtros): array
 }
 
 /**
- * Resumen por fecha y cenco con saca (venta S700) > 0 — alineado al módulo Ventas.
+ * Resumen por fecha y cenco con saca (S700) > 0 (totales cenco, no por galpón).
  *
  * @return list<array<string, mixed>>
  */
@@ -1375,9 +1368,21 @@ HAVING (COALESCE(SUM(CASE WHEN TRIM(mz.tcodigo) = 'P0001001' THEN mz.tcantid ELS
       + COALESCE(SUM(CASE WHEN TRIM(mz.tcodigo) = 'P0001002' THEN mz.tcantid ELSE 0 END), 0)) > 0";
 
     $sqlResumenS808 = "
-SELECT k.fecha, LEFT(k.cenco6, 3) AS granja, RIGHT(k.cenco6, 3) AS campania, k.galpon,
-       (k.venta_macho + k.venta_hembra) AS venta, /* + mort_desp_macho/hembra agregados */
-       ...
+SELECT
+    k.fecha,
+    LEFT(k.cenco6, 3) AS granja,
+    RIGHT(k.cenco6, 3) AS campania,
+    k.galpon,
+    (k.venta_macho + k.venta_hembra) AS venta,
+    COALESCE(SUM(mz.tcantid), 0) AS mortalidad,
+    k.venta_macho,
+    k.venta_hembra,
+    CASE WHEN k.venta_macho > 0 THEN COALESCE(SUM(CASE WHEN mz.tcodigo = 'P0001001'
+        AND LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0') IN {$causasDespacho}
+        THEN mz.tcantid ELSE 0 END), 0) ELSE 0 END AS mort_desp_macho,
+    CASE WHEN k.venta_hembra > 0 THEN COALESCE(SUM(CASE WHEN mz.tcodigo = 'P0001002'
+        AND LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0') IN {$causasDespacho}
+        THEN mz.tcantid ELSE 0 END), 0) ELSE 0 END AS mort_desp_hembra
 FROM `{$t}` k
 LEFT JOIN movi_zonas mz ON
     mz.tcodtra = 'S808'
@@ -1386,7 +1391,8 @@ LEFT JOIN movi_zonas mz ON
     AND mz.tfectra < DATE_ADD(k.fecha, INTERVAL 1 DAY)
     AND TRIM(mz.tcencos) = k.tcencos
     AND TRIM(CAST(mz.tcodint AS CHAR)) = k.galpon
-GROUP BY k.fecha, k.cenco6, k.galpon, k.venta_macho, k.venta_hembra, k.tcencos";
+GROUP BY k.fecha, k.cenco6, k.galpon, k.venta_macho, k.venta_hembra, k.tcencos
+ORDER BY k.fecha DESC, k.cenco6 ASC, k.galpon ASC";
 
     $sqlCausas = "
 SELECT LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0') AS cod_mort,
