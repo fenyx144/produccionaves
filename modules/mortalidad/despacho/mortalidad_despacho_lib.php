@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /** Revisión desplegable (health / JSON libRev). Compatible PHP >= 7.2. */
 if (!defined('MORT_DESPACHO_LIB_REV')) {
-    define('MORT_DESPACHO_LIB_REV', '20260924h');
+    define('MORT_DESPACHO_LIB_REV', '20260924i');
 }
 
 /** Escapa valor SQL (PHP 7.2: mysqli_real_escape_string exige string; claves numéricas de granja pueden ser int). */
@@ -275,22 +275,25 @@ function mort_despacho_where_s700(mysqli $conn, array $filtros, string $alias = 
 }
 
 /**
- * Cantidad despachada (S700) por fecha + cenco, directo en movi_zonas (como Ventas).
+ * Cantidad despachada por fecha + cenco: SUM(venta) sobre mort_ventas_sql_agrupada
+ * (misma agregación que el listado Ventas, sumando galpones del cenco).
  *
  * @return array<string, float>
  */
 function mort_despacho_resumen_cantidad_despachada_map(mysqli $conn, array $filtros): array
 {
-    $where = mort_despacho_where_s700($conn, $filtros, 'mz');
-    $exprCenco = mort_despacho_sql_expr_cenco('mz');
+    $inner = mort_ventas_sql_agrupada($conn, $filtros);
+    $filtroCencos = mort_despacho_sql_filtro_cencos_en_x($conn, $filtros);
+
     $sql = "
     SELECT
-        DATE(mz.tfectra) AS fecha,
-        {$exprCenco} AS cencos,
-        COALESCE(SUM(CASE WHEN TRIM(mz.tcodtra) = 'S700' THEN mz.tcantid ELSE 0 END), 0) AS cantidad_despachada
-    FROM movi_zonas mz
-    WHERE {$where}
-    GROUP BY DATE(mz.tfectra), {$exprCenco}
+        x.fecha,
+        CONCAT(LPAD(TRIM(x.granja), 3, '0'), LPAD(TRIM(x.campania), 3, '0')) AS cencos,
+        COALESCE(SUM(x.venta), 0) AS cantidad_despachada
+    FROM ({$inner}) x
+    WHERE 1=1 {$filtroCencos}
+    GROUP BY x.fecha, LPAD(TRIM(x.granja), 3, '0'), LPAD(TRIM(x.campania), 3, '0')
+    HAVING cantidad_despachada > 0
     ";
 
     $map = [];
@@ -810,64 +813,84 @@ function mort_despacho_resumen_stats_map(mysqli $conn, array $filtros): array
 }
 
 /**
- * Resumen por fecha y cenco: todas las granjas/campañas del catálogo; 0 % si no hubo mort. despacho.
+ * Resumen por fecha y cenco con saca (venta S700) > 0 — alineado al módulo Ventas.
  *
  * @return list<array<string, mixed>>
  */
 function mort_despacho_consultar_resumen_granjas(mysqli $conn, array $filtros): array
 {
-    $rango = mort_ventas_rango($filtros);
-    $fechas = mort_despacho_fechas_en_rango($rango);
-    if ($fechas === []) {
+    $stats = mort_despacho_resumen_stats_map($conn, $filtros);
+    if ($stats === []) {
         return [];
     }
 
-    $stats = mort_despacho_resumen_stats_map($conn, $filtros);
-    $catalogo = mort_despacho_catalogo_cencos($conn, $filtros, $rango);
-    if ($catalogo === []) {
-        return [];
+    $filas = [];
+    foreach ($stats as $key => $st) {
+        $cantDesp = (float) ($st['cantidadDespachada'] ?? 0);
+        if ($cantDesp <= 0) {
+            continue;
+        }
+        $parts = explode('|', $key, 2);
+        if (count($parts) !== 2) {
+            continue;
+        }
+        $fecha = $parts[0];
+        $cencos = $parts[1];
+        if (strlen($cencos) < 6) {
+            continue;
+        }
+        $granja = substr($cencos, 0, 3);
+        $campania = substr($cencos, 3, 3);
+        $muertos = (int) ($st['muertos'] ?? 0);
+        $pct = round($muertos * 100 / $cantDesp, 2);
+        $filas[] = [
+            'fecha' => $fecha,
+            'cencos' => $cencos,
+            'granjaCod' => $granja,
+            'campania' => $campania,
+            'cantidadDespachada' => $cantDesp,
+            'muertos' => $muertos,
+            'porcentajeMortDespacho' => $pct,
+        ];
     }
-    $maxFilas = 8000;
-    if (count($fechas) * count($catalogo) > $maxFilas) {
+
+    if (count($filas) > 8000) {
         throw new RuntimeException(
-            'El resumen generaría demasiadas filas (' . (count($fechas) * count($catalogo))
-            . '). Acote el periodo o seleccione granjas/campañas en el filtro.'
+            'Demasiados registros con despacho (' . count($filas) . '). Acote el periodo o el filtro de granjas.'
         );
     }
+
+    usort($filas, static function ($a, $b) {
+        $cmp = strcmp((string) $b['fecha'], (string) $a['fecha']);
+        if ($cmp !== 0) {
+            return $cmp;
+        }
+
+        return strcmp((string) $a['cencos'], (string) $b['cencos']);
+    });
+
     $nombres = mort_despacho_nombres_granja($conn);
     $out = [];
     $n = 0;
-
-    foreach ($fechas as $fecha) {
-        foreach ($catalogo as $cat) {
-            $granja = trim((string) ($cat['granja'] ?? ''));
-            $campania = trim((string) ($cat['campania'] ?? ''));
-            $cencos = mort_despacho_cenco_seis(
-                $granja !== '' ? $granja : substr((string) ($cat['cencos'] ?? ''), 0, 3),
-                $campania !== '' ? $campania : substr((string) ($cat['cencos'] ?? ''), 3, 3)
-            );
-            $key = $fecha . '|' . $cencos;
-            $st = $stats[$key] ?? ['cantidadDespachada' => 0.0, 'muertos' => 0];
-            $cantDesp = (float) ($st['cantidadDespachada'] ?? 0);
-            $muertos = (int) ($st['muertos'] ?? 0);
-            $pct = $cantDesp > 0 ? round($muertos * 100 / $cantDesp, 2) : 0.0;
-            $nomBase = $nombres[$granja] ?? '';
-            $granjaLabel = $nomBase !== ''
-                ? $nomBase . ' C=' . $campania
-                : 'Granja ' . $granja . ' C=' . $campania;
-            $n++;
-            $out[] = [
-                'numero' => $n,
-                'fecha' => $fecha,
-                'cencos' => $cencos,
-                'granja' => $granjaLabel,
-                'granjaCod' => $granja,
-                'campania' => $campania,
-                'cantidadDespachada' => $cantDesp,
-                'muertos' => $muertos,
-                'porcentajeMortDespacho' => $pct,
-            ];
-        }
+    foreach ($filas as $row) {
+        $granja = $row['granjaCod'];
+        $campania = $row['campania'];
+        $nomBase = $nombres[$granja] ?? '';
+        $granjaLabel = $nomBase !== ''
+            ? $nomBase . ' C=' . $campania
+            : 'Granja ' . $granja . ' C=' . $campania;
+        $n++;
+        $out[] = [
+            'numero' => $n,
+            'fecha' => $row['fecha'],
+            'cencos' => $row['cencos'],
+            'granja' => $granjaLabel,
+            'granjaCod' => $granja,
+            'campania' => $campania,
+            'cantidadDespachada' => $row['cantidadDespachada'],
+            'muertos' => $row['muertos'],
+            'porcentajeMortDespacho' => $row['porcentajeMortDespacho'],
+        ];
     }
 
     return $out;

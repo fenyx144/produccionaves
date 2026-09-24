@@ -247,7 +247,7 @@
     function pintarResumen(filas, rangoTexto) {
         setTituloPanel('#mdp-titulo-resumen', 'Resumen de mortalidad por granja', rangoTexto);
         if (!filas || filas.length === 0) {
-            $('#mdp-tabla-resumen').html('<p class="mdp-empty">Sin registros en el periodo.</p>');
+            $('#mdp-tabla-resumen').html('<p class="mdp-empty">Sin despacho (S700) en el periodo con los filtros actuales.</p>');
             return;
         }
         let sumDesp = 0;
