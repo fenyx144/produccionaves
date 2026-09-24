@@ -417,7 +417,10 @@
         const params = leerFiltrosFormulario();
         setIndicadorCargaMdp(true, 'Cargando análisis…');
 
-        ajaxAnalisisBloque(params, 'completo', 120000)
+        const reqPrincipal = ajaxAnalisisBloque(params, 'principal', 95000);
+        const reqEtapas = ajaxAnalisisBloque(params, 'etapas', 95000);
+
+        reqPrincipal
             .done(function (j) {
                 if (!j || !j.success) {
                     Swal.fire({ icon: 'error', title: 'Error', text: mensajeErrorAjax('', j, 200) });
@@ -426,7 +429,6 @@
                 const rangoTexto = tituloPeriodo(j.rango);
                 pintarResumen(j.resumenGranjas || [], rangoTexto);
                 pintarCausas(j.causas || { filas: [], total: 0 }, rangoTexto);
-                pintarEtapas(j.etapas || { filas: [], total: 0 }, rangoTexto);
             })
             .fail(function (xhr, status) {
                 let j = null;
@@ -437,12 +439,24 @@
                 Swal.fire({ icon: 'error', title: 'Error', text: msg });
                 $('#mdp-tabla-resumen').html('<p class="mdp-empty">No se pudo cargar el análisis.</p>');
                 $('#mdp-tabla-causas').html('<p class="mdp-empty">No se pudo cargar el análisis.</p>');
-                $('#mdp-tabla-etapas').html('<p class="mdp-empty">No se pudo cargar el análisis.</p>');
-            })
-            .always(function () {
-                cargando = false;
-                setIndicadorCargaMdp(false);
             });
+
+        reqEtapas
+            .done(function (j) {
+                if (!j || !j.success) {
+                    pintarEtapas({ filas: [], total: 0 }, '');
+                    return;
+                }
+                pintarEtapas(j.etapas || { filas: [], total: 0 }, tituloPeriodo(j.rango));
+            })
+            .fail(function () {
+                $('#mdp-tabla-etapas').html('<p class="mdp-empty">No se pudo cargar etapas.</p>');
+            });
+
+        $.when(reqPrincipal, reqEtapas).always(function () {
+            cargando = false;
+            setIndicadorCargaMdp(false);
+        });
     }
 
     function syncGranjaDisplay() {
