@@ -1,0 +1,20 @@
+{
+  "name": "Producción Aves - Mortalidad",
+  "user": "ubuntu",
+  "install": "bash .cursor/install.sh",
+  "start": "bash .cursor/start.sh",
+  "terminals": [
+    {
+      "name": "web-ui",
+      "command": "php -S 0.0.0.0:8080 -t ."
+    },
+    {
+      "name": "api-movil",
+      "command": "php -S 0.0.0.0:8090 -t app/public .cursor/dev/api-router.php"
+    }
+  ],
+  "ports": [
+    { "name": "Web UI", "port": 8080 },
+    { "name": "API móvil", "port": 8090 }
+  ]
+}
