@@ -365,38 +365,84 @@
         return Math.round((Number(n) || 0) * 100) / 100;
     }
 
+    function ajaxAnalisisBloque(params, bloque, timeoutMs) {
+        const data = Object.assign({}, params, { bloque: bloque });
+        return $.ajax({
+            url: cfg.apiUrl,
+            data: data,
+            dataType: 'json',
+            timeout: timeoutMs,
+            cache: false
+        });
+    }
+
+    function mensajeErrorAjax(status, j) {
+        if (j && j.message) {
+            return j.message;
+        }
+        if (status === 'timeout') {
+            return 'La consulta tardó demasiado. Acote granjas/campañas o reduzca el periodo.';
+        }
+        return 'Fallo la consulta al servidor.';
+    }
+
     function cargarAnalisis() {
         if (cargando) return;
         cargando = true;
         $('#mdp-btn-consultar').prop('disabled', true);
         const params = leerFiltrosFormulario();
-        $.ajax({
-            url: cfg.apiUrl,
-            data: params,
-            dataType: 'json',
-            timeout: 120000,
-            cache: false
-        })
-            .done(function (j) {
-                if (!j || !j.success) {
-                    Swal.fire({ icon: 'error', title: 'Error', text: (j && j.message) || 'No se pudo cargar el análisis.' });
-                    return;
-                }
-                const rangoTexto = tituloPeriodo(j.rango);
-                pintarCausas(j.causas, rangoTexto);
-                pintarEtapas(j.etapas, rangoTexto);
-                pintarResumen(j.resumenGranjas || [], rangoTexto);
-            })
-            .fail(function (_xhr, status) {
-                const msg = status === 'timeout'
-                    ? 'La consulta tardó demasiado. Acote granjas o periodo e intente de nuevo.'
-                    : 'Fallo la consulta al servidor.';
-                Swal.fire({ icon: 'error', title: 'Error', text: msg });
-            })
-            .always(function () {
+
+        $('#mdp-tabla-resumen').html('<p class="mdp-empty">Cargando resumen…</p>');
+        $('#mdp-tabla-causas').html('<p class="mdp-empty">Cargando causas…</p>');
+        $('#mdp-tabla-etapas').html('<p class="mdp-empty">Cargando etapas…</p>');
+
+        let rangoTexto = '';
+        let pendientes = 2;
+
+        function finalizar() {
+            pendientes -= 1;
+            if (pendientes <= 0) {
                 cargando = false;
                 $('#mdp-btn-consultar').prop('disabled', false);
-            });
+            }
+        }
+
+        ajaxAnalisisBloque(params, 'principal', 120000)
+            .done(function (j) {
+                if (!j || !j.success) {
+                    Swal.fire({ icon: 'error', title: 'Error', text: mensajeErrorAjax('', j) });
+                    return;
+                }
+                rangoTexto = tituloPeriodo(j.rango);
+                pintarResumen(j.resumenGranjas || [], rangoTexto);
+                pintarCausas(j.causas || { filas: [], total: 0 }, rangoTexto);
+            })
+            .fail(function (xhr, status) {
+                let msg = mensajeErrorAjax(status);
+                try {
+                    const j = xhr.responseJSON;
+                    if (j && j.message) msg = j.message;
+                } catch (e) { /* ignore */ }
+                Swal.fire({ icon: 'error', title: 'Error', text: msg });
+                $('#mdp-tabla-resumen').html('<p class="mdp-empty">No se pudo cargar el resumen.</p>');
+                $('#mdp-tabla-causas').html('<p class="mdp-empty">No se pudo cargar causas.</p>');
+            })
+            .always(finalizar);
+
+        ajaxAnalisisBloque(params, 'etapas', 90000)
+            .done(function (j) {
+                if (!j || !j.success) {
+                    pintarEtapas({ filas: [], total: 0 }, rangoTexto || tituloPeriodo(j && j.rango));
+                    return;
+                }
+                const rt = rangoTexto || tituloPeriodo(j.rango);
+                pintarEtapas(j.etapas || { filas: [], total: 0 }, rt);
+            })
+            .fail(function () {
+                pintarEtapas({ filas: [], total: 0 }, rangoTexto);
+                $('#mdp-tabla-etapas').html('<p class="mdp-empty">Etapas no disponibles (consulta lenta o sin datos).</p>');
+            })
+            .always(finalizar);
     }
 
     function syncGranjaDisplay() {

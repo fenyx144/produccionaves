@@ -83,18 +83,32 @@ try {
         exit;
     }
 
-    $data = mort_despacho_analisis_completo($conn, $filtros);
+    $bloque = strtolower(trim((string) ($_GET['bloque'] ?? $_POST['bloque'] ?? 'completo')));
+    if ($bloque === 'principal') {
+        $data = mort_despacho_analisis_bloque_principal($conn, $filtros);
+    } elseif ($bloque === 'etapas') {
+        $data = mort_despacho_analisis_bloque_etapas($conn, $filtros);
+    } else {
+        $data = mort_despacho_analisis_completo($conn, $filtros);
+    }
     mysqli_close($conn);
 
     $payload = [
         'success' => true,
         'libRev' => defined('MORT_DESPACHO_LIB_REV') ? MORT_DESPACHO_LIB_REV : null,
+        'bloque' => $bloque,
         'filtros' => $filtros,
         'rango' => $data['rango'],
-        'causas' => $data['causas'],
-        'etapas' => $data['etapas'],
-        'resumenGranjas' => $data['resumenGranjas'],
     ];
+    if (array_key_exists('causas', $data)) {
+        $payload['causas'] = $data['causas'];
+    }
+    if (array_key_exists('etapas', $data)) {
+        $payload['etapas'] = $data['etapas'];
+    }
+    if (array_key_exists('resumenGranjas', $data)) {
+        $payload['resumenGranjas'] = $data['resumenGranjas'];
+    }
 
     $jsonFlags = JSON_UNESCAPED_UNICODE;
     if (defined('JSON_INVALID_UTF8_SUBSTITUTE')) {
