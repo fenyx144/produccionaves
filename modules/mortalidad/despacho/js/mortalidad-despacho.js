@@ -2,6 +2,8 @@
     'use strict';
 
     const cfg = window.MORT_DESPACHO_CFG || {};
+    /** Análisis pesado solo con Buscar; nunca al abrir la pantalla. */
+    const autoCargarAnalisis = cfg.autoCargarAnalisis === true;
     let cargando = false;
     let mrtDspGmc = null;
     let selCodes = [];
@@ -574,5 +576,8 @@
             limpiarFiltros();
         });
 
+        if (autoCargarAnalisis) {
+            cargarAnalisis();
+        }
     });
 })();

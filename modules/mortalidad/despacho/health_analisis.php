@@ -73,6 +73,14 @@ try {
     $filasVenta = mort_despacho_ventas_agrupada_filas($conn, $filtros);
     $steps[] = ['step' => 'ventas_agrupada', 'ok' => true, 'filas' => count($filasVenta)];
 
+    $s808Huerfanos = mort_despacho_contar_s808_sin_par_s700($conn, $filtros);
+    $steps[] = [
+        'step' => 's808_sin_s700_pareado',
+        'ok' => true,
+        'filas_s808_sin_par' => $s808Huerfanos,
+        'nota' => 'S808 sin S700 mismo cenco, día, galpón y tcodigo (sexo); el análisis no los incluye',
+    ];
+
     $stats = mort_despacho_resumen_stats_map($conn, $filtros);
     $steps[] = ['step' => 'resumen_stats', 'ok' => true, 'keys' => count($stats)];
 

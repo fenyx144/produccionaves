@@ -252,7 +252,8 @@ window.MORT_DESPACHO_CFG = {
     apiUrl: <?= json_encode($apiUrl, JSON_UNESCAPED_UNICODE) ?>,
     campaniasUrl: <?= json_encode($campaniasApiUrl, JSON_UNESCAPED_UNICODE) ?>,
     granjasMetaUrl: <?= json_encode($granjasMetaUrl, JSON_UNESCAPED_UNICODE) ?>,
-    filtrosApiUrl: <?= json_encode($filtrosApiUrl, JSON_UNESCAPED_UNICODE) ?>
+    filtrosApiUrl: <?= json_encode($filtrosApiUrl, JSON_UNESCAPED_UNICODE) ?>,
+    autoCargarAnalisis: false
 };
 </script>
 <script src="../../../assets/js/gmc-periodo-campanias.js?v=<?php echo (int) @filemtime(__DIR__ . '/../../../assets/js/gmc-periodo-campanias.js'); ?>"></script>
