@@ -6,6 +6,8 @@
     let mrtDspGmc = null;
     let selCodes = [];
     let campByGranja = {};
+    let granjasMetaCache = null;
+    let granjasMetaPromise = null;
 
     function escapeHtml(s) {
         return String(s ?? '')
@@ -101,20 +103,41 @@
         return { desde: '', hasta: '' };
     }
 
-    /** Alinea el periodo del modal de campañas con los filtros del dashboard (consultas acotadas). */
-    function syncModalPeriodoDesdeDashboard() {
-        const r = rangoYmdDesdePeriodoDashboard();
-        if (!r.desde || !r.hasta) {
-            return;
+    function granjasMetaLista() {
+        return granjasMetaCache || cfg.granjasMeta || [];
+    }
+
+    function fetchGranjasMeta() {
+        if (granjasMetaCache && granjasMetaCache.length) {
+            return Promise.resolve(granjasMetaCache);
         }
-        const elDesde = document.getElementById('mrt-dsp-periodo-camp-desde');
-        const elHasta = document.getElementById('mrt-dsp-periodo-camp-hasta');
-        if (elDesde) {
-            elDesde.value = r.desde;
+        if (granjasMetaPromise) {
+            return granjasMetaPromise;
         }
-        if (elHasta) {
-            elHasta.value = r.hasta;
+        const embedded = cfg.granjasMeta || [];
+        if (embedded.length) {
+            granjasMetaCache = embedded;
+            return Promise.resolve(granjasMetaCache);
         }
+        const url = String(cfg.granjasMetaUrl || '').trim();
+        if (!url) {
+            return Promise.resolve([]);
+        }
+        granjasMetaPromise = fetch(url, { credentials: 'same-origin', cache: 'default' })
+            .then(function (r) { return r.json(); })
+            .then(function (j) {
+                granjasMetaCache = (j && j.granjas) ? j.granjas : [];
+                cfg.granjasMeta = granjasMetaCache;
+                return granjasMetaCache;
+            })
+            .catch(function () {
+                granjasMetaCache = [];
+                return [];
+            })
+            .finally(function () {
+                granjasMetaPromise = null;
+            });
+        return granjasMetaPromise;
     }
 
     function appendPeriodoDashboard(p) {
@@ -347,7 +370,7 @@
             const g = cod.slice(0, 3);
             const c = cod.slice(-3);
             let nom = '';
-            const meta = (cfg.granjasMeta || []).find(function (m) { return m.granja === g; });
+            const meta = granjasMetaLista().find(function (m) { return m.granja === g; });
             if (meta) nom = meta.nombre || '';
             inp.value = g + (nom ? ' ' + nom : '') + ' - ' + c;
             inp.title = '1 campaña seleccionada — Clic para cambiar';
@@ -375,20 +398,20 @@
         selCodes = [];
         campByGranja = {};
         syncVisibilidadPeriodo();
-        syncModalPeriodoDesdeDashboard();
         syncGranjaDisplay();
     }
 
     function getCampaniasUrl(codes) {
-        syncModalPeriodoDesdeDashboard();
-        const list = (codes && codes.length)
-            ? codes
-            : (cfg.granjasMeta || []).map(function (g) { return g.granja || ''; }).filter(Boolean);
+        const list = (codes && codes.length) ? codes : [];
         if (!list.length) {
             return '';
         }
         const p = new URLSearchParams({ granjas: list.join(',') });
-        appendPeriodoDashboard(p);
+        if (window.GmcPeriodoCampanias) {
+            window.GmcPeriodoCampanias.appendToSearchParams(p, 'mrt-dsp');
+        } else {
+            p.set('periodoTipo', 'TODOS');
+        }
         const base = String(cfg.campaniasUrl || '');
         if (!base) {
             return '';
@@ -418,7 +441,7 @@
                 setMultiState(st);
             },
             granjasFetch: function () {
-                return Promise.resolve(cfg.granjasMeta || []);
+                return fetchGranjasMeta();
             },
             campaniasFetch: function (codes) {
                 const url = getCampaniasUrl(codes);
@@ -443,7 +466,6 @@
 
     $(function () {
         syncVisibilidadPeriodo();
-        syncModalPeriodoDesdeDashboard();
         syncGranjaDisplay();
         initMrtDspGmc();
 
@@ -452,12 +474,7 @@
             $('#iconoFiltrosMdp').toggleClass('rotate-180');
         });
 
-        $('#mdp-periodo-tipo').on('change', function () {
-            syncVisibilidadPeriodo();
-            syncModalPeriodoDesdeDashboard();
-        });
-        $('#mdp-fecha-unica, #mdp-fecha-inicio, #mdp-fecha-fin, #mdp-mes-unico, #mdp-mes-inicio, #mdp-mes-fin')
-            .on('change', syncModalPeriodoDesdeDashboard);
+        $('#mdp-periodo-tipo').on('change', syncVisibilidadPeriodo);
         $('#mdp-btn-consultar').on('click', cargarAnalisis);
         $('#mdp-btn-limpiar').on('click', function () {
             limpiarFiltros();

@@ -11,28 +11,11 @@ if (empty($_SESSION['active'])) {
     exit();
 }
 
-include_once __DIR__ . '/../../../../conexion_grs/conexion.php';
-if (file_exists(__DIR__ . '/../../../core/lib/hc/hc_granjas_repository.php')) {
-    require_once __DIR__ . '/../../../core/lib/hc/hc_granjas_repository.php';
-}
-
-$conexion = conectar_joya_mysqli();
-$granjasZonas = [];
-if ($conexion) {
-    try {
-        if (function_exists('hc_granjas_listar_para_selector')) {
-            $granjasZonas = hc_granjas_listar_para_selector($conexion);
-        }
-    } catch (\Throwable $e) {
-        $granjasZonas = [];
-    }
-    mysqli_close($conexion);
-}
-
 $baseModUrl = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? ''));
 $modMortUrl = str_replace('\\', '/', dirname(dirname($_SERVER['SCRIPT_NAME'] ?? '')));
 $apiUrl = $baseModUrl . '/get_analisis_despacho.php';
 $campaniasApiUrl = $modMortUrl . '/get_campanias_mortalidad.php';
+$granjasMetaUrl = $baseModUrl . '/get_granjas_meta.php';
 $filtrosApiUrl = $modMortUrl . '/listado/get_opciones_filtros.php';
 $hoy = date('Y-m-d');
 $mesActual = date('Y-m');
@@ -237,19 +220,8 @@ require __DIR__ . '/../../../core/lib/modals/modal_granjas_campanias.php';
 window.MORT_DESPACHO_CFG = {
     apiUrl: <?= json_encode($apiUrl, JSON_UNESCAPED_UNICODE) ?>,
     campaniasUrl: <?= json_encode($campaniasApiUrl, JSON_UNESCAPED_UNICODE) ?>,
-    filtrosApiUrl: <?= json_encode($filtrosApiUrl, JSON_UNESCAPED_UNICODE) ?>,
-    granjasMeta: <?php
-        $gm = [];
-        foreach (array_values($granjasZonas) as $gz) {
-            $gm[] = [
-                'granja' => $gz['granja'] ?? '',
-                'nombre' => $gz['nombre_granja'] ?? $gz['nombre'] ?? '',
-                'zona' => $gz['zona'] ?? '',
-                'subzona' => $gz['subzona'] ?? '',
-            ];
-        }
-        echo json_encode($gm, JSON_UNESCAPED_UNICODE);
-    ?>
+    granjasMetaUrl: <?= json_encode($granjasMetaUrl, JSON_UNESCAPED_UNICODE) ?>,
+    filtrosApiUrl: <?= json_encode($filtrosApiUrl, JSON_UNESCAPED_UNICODE) ?>
 };
 </script>
 <script src="../../../assets/js/gmc-periodo-campanias.js?v=<?php echo (int) @filemtime(__DIR__ . '/../../../assets/js/gmc-periodo-campanias.js'); ?>"></script>
