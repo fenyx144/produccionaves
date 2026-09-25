@@ -218,7 +218,7 @@ $ultimoDiaMes = date('Y-m-t');
             <div class="tabla-listado-wrapper bg-white rounded-xl shadow-md p-5 mdp-tabla-wrap">
                 <h4 class="mdp-panel-title" id="mdp-titulo-causas">Mortalidad por causa</h4>
                 <div class="table-wrapper" id="mdp-tabla-causas">
-                    <p class="mdp-empty">Pulse Buscar. Sin filtro de granjas el periodo máximo es 31 días.</p>
+                    <p class="mdp-empty">Cargando análisis del mes en curso…</p>
                 </div>
             </div>
             <div class="tabla-listado-wrapper bg-white rounded-xl shadow-md p-5 mdp-tabla-wrap">
@@ -253,7 +253,7 @@ window.MORT_DESPACHO_CFG = {
     campaniasUrl: <?= json_encode($campaniasApiUrl, JSON_UNESCAPED_UNICODE) ?>,
     granjasMetaUrl: <?= json_encode($granjasMetaUrl, JSON_UNESCAPED_UNICODE) ?>,
     filtrosApiUrl: <?= json_encode($filtrosApiUrl, JSON_UNESCAPED_UNICODE) ?>,
-    autoCargarAnalisis: false
+    autoCargarAnalisis: true
 };
 </script>
 <script src="../../../assets/js/gmc-periodo-campanias.js?v=<?php echo (int) @filemtime(__DIR__ . '/../../../assets/js/gmc-periodo-campanias.js'); ?>"></script>

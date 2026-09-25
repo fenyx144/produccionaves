@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /** Revisión desplegable (health / JSON libRev). Compatible PHP >= 7.2. */
 if (!defined('MORT_DESPACHO_LIB_REV')) {
-    define('MORT_DESPACHO_LIB_REV', '20260925w');
+    define('MORT_DESPACHO_LIB_REV', '20260925x');
 }
 
 if (!defined('MORT_DESPACHO_MAX_KEYS_VENTA')) {
@@ -19,10 +19,6 @@ if (!defined('MORT_DESPACHO_QUERY_TIME_SEC')) {
 }
 
 /** Sin filtro de cencos: como mucho un mes calendario. */
-if (!defined('MORT_DESPACHO_MAX_DIAS_SIN_CENCOS')) {
-    define('MORT_DESPACHO_MAX_DIAS_SIN_CENCOS', 31);
-}
-
 if (!defined('MORT_DESPACHO_MAX_DIAS_ABSOLUTO')) {
     define('MORT_DESPACHO_MAX_DIAS_ABSOLUTO', 366);
 }
@@ -85,15 +81,6 @@ function mort_despacho_validar_politica_carga(array $filtros): void
     }
     if ($dias > MORT_DESPACHO_MAX_DIAS_ABSOLUTO) {
         throw new RuntimeException('El periodo máximo permitido es de un año. Reduzca el rango de fechas.');
-    }
-
-    $lista = $filtros['cencos_list'] ?? [];
-    $tieneCencos = is_array($lista) && count($lista) > 0;
-    if (!$tieneCencos && $dias > MORT_DESPACHO_MAX_DIAS_SIN_CENCOS) {
-        throw new RuntimeException(
-            'Sin granjas/campañas seleccionadas solo se permite hasta 31 días. '
-            . 'Use el filtro de granjas o acorte el periodo (por ejemplo un mes).'
-        );
     }
 }
 
