@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /** Revisión desplegable (health / JSON libRev). Compatible PHP >= 7.2. */
 if (!defined('MORT_DESPACHO_LIB_REV')) {
-    define('MORT_DESPACHO_LIB_REV', '20260925v');
+    define('MORT_DESPACHO_LIB_REV', '20260925w');
 }
 
 if (!defined('MORT_DESPACHO_MAX_KEYS_VENTA')) {
@@ -609,7 +609,7 @@ function mort_despacho_debug_tabla_causas(mysqli $conn, array $filtros): array
         'agregado_por_codigo' => $porCodigo,
         'tabla1_ui' => $tablaUi,
         'lineas_excluidas_motivo_no_despacho' => $sinMotivoValido,
-        'nota' => 'tabla1 usa cabecera JD4 + fechaRegistro (tfecrem) y motivos 14/17/18/19 en cada línea movi.',
+        'nota' => 'tabla1: JD4 + tfecrem; motivos 05/14/17/18/19 (05 = Muerte súbita en datos zonas).',
     ];
 }
 
@@ -875,7 +875,7 @@ function mort_despacho_ventas_agrupada_filas(mysqli $conn, array $filtros): arra
 /**
  * Análisis de mortalidad en el proceso de despacho (causas, etapas y resumen por granja).
  *
- * Tabla 1 (causas): listado — cabe_zonas JD4, motivos despacho (14, 17, 18, 19),
+ * Tabla 1 (causas): listado — cabe_zonas JD4, motivos despacho (05, 14, 17, 18, 19),
  * periodo por tfecrem (fechaRegistro).
  * Tabla 3 (resumen): S700 + S808 con causas 05, 14, 15, 17, 18, 19 y par S700
  * mismo sexo/cenco/galpón/día.
@@ -1025,7 +1025,7 @@ function mort_despacho_causas_slots(): array
 {
     return [
         ['key' => 'asfixia', 'codigos' => ['17'], 'label' => 'Asfixia'],
-        ['key' => 'muerte_subita', 'codigos' => ['14'], 'label' => 'Muerte súbita'],
+        ['key' => 'muerte_subita', 'codigos' => ['05', '14'], 'label' => 'Muerte súbita'],
         ['key' => 'degollamiento', 'codigos' => ['19'], 'label' => 'Degollamiento'],
         ['key' => 'situacion_especial', 'codigos' => [], 'label' => 'Situación especial'],
         ['key' => 'aplastamiento', 'codigos' => ['18'], 'label' => 'Aplastamiento'],
@@ -1070,14 +1070,13 @@ function mort_despacho_codigos_causa_listado_sql_in(): string
 }
 
 /**
- * Motivos tipo despacho — misma lista que get_motivos_listado.php (14, 17, 18, 19).
- * Definido aquí para no depender de modules/mortalidad/listado/ en el despliegue.
+ * Motivos tabla 1 despacho. Incluye 05 (Muerte súbita en zonas JD4) además de 14/17/18/19.
  *
  * @return list<string>
  */
 function mort_despacho_codigos_causa_listado_list(): array
 {
-    return ['14', '17', '18', '19'];
+    return ['05', '14', '17', '18', '19'];
 }
 
 function mort_despacho_codigos_causa_sql_in(): string

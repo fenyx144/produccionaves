@@ -856,7 +856,7 @@ function mort_listado_marks_tipo(string $tipoMortalidad): array
 /** Motivos tipo despacho (misma lista que get_motivos_listado.php → despacho). */
 function mort_listado_codigos_motivo_despacho(): array
 {
-    return ['14', '17', '18', '19'];
+    return ['05', '14', '17', '18', '19'];
 }
 
 /**
