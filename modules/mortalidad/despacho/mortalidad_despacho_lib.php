@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /** Revisión desplegable (health / JSON libRev). Compatible PHP >= 7.2. */
 if (!defined('MORT_DESPACHO_LIB_REV')) {
-    define('MORT_DESPACHO_LIB_REV', '20260925s');
+    define('MORT_DESPACHO_LIB_REV', '20260925t');
 }
 
 if (!defined('MORT_DESPACHO_MAX_KEYS_VENTA')) {
@@ -353,6 +353,72 @@ function mort_despacho_sql_text_causas_listado(mysqli $conn, array $filtros): st
 }
 
 /**
+ * S808 mortalidad despacho pre-agregada (periodo acotado en WHERE, luego JOIN a claves S700).
+ *
+ * @param array<string, mixed> $filtros
+ */
+function mort_despacho_sql_subquery_s808_mort_resumen(mysqli $conn, array $filtros): string
+{
+    static $cache = [];
+    $cacheId = md5(json_encode(mort_despacho_filtros_clave_cache($filtros)) . '|s808_res');
+    if (isset($cache[$cacheId])) {
+        return $cache[$cacheId];
+    }
+
+    $causas = mort_despacho_codigos_causa_resumen_sql_in();
+    $rango = mort_ventas_rango($filtros);
+    $unDia = mort_despacho_rango_es_un_dia($rango);
+
+    $conds = [
+        "mz.tcodtra = 'S808'",
+        "mz.tcodigo IN ('P0001001','P0001002')",
+        'mz.tcantid > 0',
+        "LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0') IN {$causas}",
+    ];
+    mort_despacho_append_rango_tfectra($conn, $filtros, 'mz', $conds);
+    mort_despacho_append_filtros_cenco_granja($conn, $filtros, 'mz', $conds);
+
+    $cenco6Expr = "CONCAT(
+            LPAD(LEFT(TRIM(mz.tcencos), 3), 3, '0'),
+            LPAD(RIGHT(TRIM(mz.tcencos), 3), 3, '0')
+        )";
+
+    if ($unDia && $rango !== null) {
+        $fechaEsc = mort_despacho_sql_esc($conn, $rango['desde']);
+        $fechaSelect = "CAST('{$fechaEsc}' AS DATE) AS fecha";
+        $groupBy = "
+        {$cenco6Expr},
+        TRIM(mz.tcencos),
+        TRIM(CAST(mz.tcodint AS CHAR)),
+        mz.tcodigo";
+    } else {
+        $fechaSelect = 'DATE(mz.tfectra) AS fecha';
+        $groupBy = "
+        DATE(mz.tfectra),
+        {$cenco6Expr},
+        TRIM(mz.tcencos),
+        TRIM(CAST(mz.tcodint AS CHAR)),
+        mz.tcodigo";
+    }
+
+    $sql = trim("
+    SELECT
+        {$fechaSelect},
+        {$cenco6Expr} AS cenco6,
+        TRIM(mz.tcencos) AS tcencos,
+        TRIM(CAST(mz.tcodint AS CHAR)) AS galpon,
+        mz.tcodigo AS tcodigo,
+        COALESCE(SUM(mz.tcantid), 0) AS muertos
+    FROM movi_zonas mz
+    WHERE " . implode(' AND ', $conds) . "
+    GROUP BY {$groupBy}");
+
+    $cache[$cacheId] = $sql;
+
+    return $sql;
+}
+
+/**
  * Tabla 3: resumen por cenco (S700 + S808 criterio ventas/resumen).
  *
  * @param array<string, mixed> $filtros
@@ -360,17 +426,23 @@ function mort_despacho_sql_text_causas_listado(mysqli $conn, array $filtros): st
 function mort_despacho_sql_text_resumen_cenco(mysqli $conn, array $filtros): string
 {
     $fromClavesResumen = mort_despacho_sql_from_claves_s700($conn, $filtros, 'k');
-    $onResumen = mort_despacho_sql_on_s808_resumen('mz_r', 'k');
+    $fromMort = '(' . mort_despacho_sql_subquery_s808_mort_resumen($conn, $filtros) . ') AS m';
 
     return "
     SELECT
         k.fecha,
         k.cenco6,
         SUM(k.venta_macho + k.venta_hembra) AS cantidadDespachada,
-        COALESCE(SUM(mz_r.tcantid), 0) AS muertos
+        COALESCE(SUM(m.muertos), 0) AS muertos
     FROM {$fromClavesResumen}
-    LEFT JOIN movi_zonas mz_r ON
-        {$onResumen}
+    LEFT JOIN {$fromMort} ON
+        m.fecha = k.fecha
+        AND m.tcencos = k.tcencos
+        AND m.galpon = k.galpon
+        AND (
+            (m.tcodigo = 'P0001001' AND k.venta_macho > 0)
+            OR (m.tcodigo = 'P0001002' AND k.venta_hembra > 0)
+        )
     GROUP BY k.fecha, k.cenco6
     HAVING SUM(k.venta_macho + k.venta_hembra) > 0";
 }
@@ -502,10 +574,9 @@ function mort_despacho_ventas_agrupada_filas(mysqli $conn, array $filtros): arra
     }
 
     $fromClaves = mort_despacho_sql_from_claves_s700($conn, $filtros, 'k');
-    $causasDespacho = mort_despacho_codigos_causa_resumen_sql_in();
+    $fromMort = '(' . mort_despacho_sql_subquery_s808_mort_resumen($conn, $filtros) . ') AS m';
     $macho = "'P0001001'";
     $hembra = "'P0001002'";
-    $onS808 = mort_despacho_sql_on_s808_resumen('mz', 'k');
 
     $sql = "
     SELECT
@@ -514,20 +585,22 @@ function mort_despacho_ventas_agrupada_filas(mysqli $conn, array $filtros): arra
         RIGHT(k.cenco6, 3) AS campania,
         k.galpon,
         (k.venta_macho + k.venta_hembra) AS venta,
-        COALESCE(SUM(mz.tcantid), 0) AS mortalidad,
+        COALESCE(SUM(m.muertos), 0) AS mortalidad,
         k.venta_macho AS venta_macho,
         k.venta_hembra AS venta_hembra,
-        COALESCE(SUM(CASE WHEN mz.tcodigo = {$macho} THEN mz.tcantid ELSE 0 END), 0) AS mort_macho,
-        COALESCE(SUM(CASE WHEN mz.tcodigo = {$hembra} THEN mz.tcantid ELSE 0 END), 0) AS mort_hembra,
-        CASE WHEN k.venta_macho > 0 THEN COALESCE(SUM(CASE WHEN mz.tcodigo = {$macho}
-            AND LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0') IN {$causasDespacho}
-            THEN mz.tcantid ELSE 0 END), 0) ELSE 0 END AS mort_desp_macho,
-        CASE WHEN k.venta_hembra > 0 THEN COALESCE(SUM(CASE WHEN mz.tcodigo = {$hembra}
-            AND LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0') IN {$causasDespacho}
-            THEN mz.tcantid ELSE 0 END), 0) ELSE 0 END AS mort_desp_hembra
+        COALESCE(SUM(CASE WHEN m.tcodigo = {$macho} THEN m.muertos ELSE 0 END), 0) AS mort_macho,
+        COALESCE(SUM(CASE WHEN m.tcodigo = {$hembra} THEN m.muertos ELSE 0 END), 0) AS mort_hembra,
+        CASE WHEN k.venta_macho > 0 THEN COALESCE(SUM(CASE WHEN m.tcodigo = {$macho} THEN m.muertos ELSE 0 END), 0) ELSE 0 END AS mort_desp_macho,
+        CASE WHEN k.venta_hembra > 0 THEN COALESCE(SUM(CASE WHEN m.tcodigo = {$hembra} THEN m.muertos ELSE 0 END), 0) ELSE 0 END AS mort_desp_hembra
     FROM {$fromClaves}
-    LEFT JOIN movi_zonas mz ON
-        {$onS808}
+    LEFT JOIN {$fromMort} ON
+        m.fecha = k.fecha
+        AND m.tcencos = k.tcencos
+        AND m.galpon = k.galpon
+        AND (
+            (m.tcodigo = {$macho} AND k.venta_macho > 0)
+            OR (m.tcodigo = {$hembra} AND k.venta_hembra > 0)
+        )
     GROUP BY
         k.fecha, k.cenco6, k.galpon, k.venta_macho, k.venta_hembra, k.tcencos
     ORDER BY k.fecha DESC, k.cenco6 ASC, k.galpon ASC";
