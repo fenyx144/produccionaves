@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /** Revisión desplegable (health / JSON libRev). Compatible PHP >= 7.2. */
 if (!defined('MORT_DESPACHO_LIB_REV')) {
-    define('MORT_DESPACHO_LIB_REV', '20260925t');
+    define('MORT_DESPACHO_LIB_REV', '20260925u');
 }
 
 if (!defined('MORT_DESPACHO_MAX_KEYS_VENTA')) {
@@ -323,22 +323,45 @@ function mort_despacho_sql_from_claves_s700(mysqli $conn, array $filtros, string
 }
 
 /**
+ * WHERE tabla 1 = listado despacho (fechaRegistro en cabecera JD4; sin filtro tfectra extra).
+ *
+ * @param array<string, mixed> $filtros
+ * @param list<string> $conds
+ */
+function mort_despacho_append_where_causas_listado(mysqli $conn, array $filtros, array &$conds, bool $filtrarMotivosDespacho = true): void
+{
+    if ($filtrarMotivosDespacho) {
+        $causas = mort_despacho_codigos_causa_listado_sql_in();
+        $conds[] = "LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0') IN {$causas}";
+    }
+}
+
+/**
+ * @param array<string, mixed> $filtros
+ * @return list<string>
+ */
+function mort_despacho_sql_conds_causas_listado(mysqli $conn, array $filtros, bool $filtrarMotivosDespacho = true): array
+{
+    $conds = [
+        "TRIM(cz.mark) = 'JD4'",
+        "TRIM(mz.tcodigo) IN ('P0001001','P0001002')",
+        'mz.tcantid > 0',
+    ];
+    mort_despacho_append_rango_fecha_registro_cz($conn, $filtros, 'cz', $conds);
+    mort_despacho_append_filtros_cenco_granja($conn, $filtros, 'mz', $conds);
+    mort_despacho_append_where_causas_listado($conn, $filtros, $conds, $filtrarMotivosDespacho);
+
+    return $conds;
+}
+
+/**
  * Tabla 1: cabecera JD4 + detalle movi (mismo criterio que listado mortalidad despacho).
  *
  * @param array<string, mixed> $filtros
  */
 function mort_despacho_sql_text_causas_listado(mysqli $conn, array $filtros): string
 {
-    $causas = mort_despacho_codigos_causa_listado_sql_in();
-    $conds = [
-        "TRIM(cz.mark) = 'JD4'",
-        "TRIM(mz.tcodigo) IN ('P0001001','P0001002')",
-        'mz.tcantid > 0',
-        "LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0') IN {$causas}",
-    ];
-    mort_despacho_append_rango_fecha_registro_cz($conn, $filtros, 'cz', $conds);
-    mort_despacho_append_rango_tfectra($conn, $filtros, 'mz', $conds);
-    mort_despacho_append_filtros_cenco_granja($conn, $filtros, 'mz', $conds);
+    $conds = mort_despacho_sql_conds_causas_listado($conn, $filtros, true);
 
     return "
     SELECT
@@ -350,6 +373,170 @@ function mort_despacho_sql_text_causas_listado(mysqli $conn, array $filtros): st
         AND cz.tdoc = mz.tdoc AND cz.tserie = mz.tserie AND cz.tnumfac = mz.tnumfac
     WHERE " . implode("\n        AND ", $conds) . "
     GROUP BY LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0')";
+}
+
+/**
+ * Detalle línea a línea (debug tabla 1): mismos filtros que causas agregadas.
+ *
+ * @param array<string, mixed> $filtros
+ */
+function mort_despacho_sql_text_causas_listado_detalle(mysqli $conn, array $filtros): string
+{
+    $conds = mort_despacho_sql_conds_causas_listado($conn, $filtros, true);
+    $exprCenco = mort_despacho_sql_expr_cenco('mz');
+
+    return "
+    SELECT
+        cz.external_id AS id_registro,
+        cz.tnumfac AS tnumfac_raw,
+        cz.tfecrem AS fecha_registro,
+        mz.tfectra AS fecha_movimiento,
+        {$exprCenco} AS cenco6,
+        TRIM(mz.tcencos) AS tcencos,
+        TRIM(CAST(mz.tcodint AS CHAR)) AS galpon,
+        TRIM(mz.tcodigo) AS tcodigo,
+        CASE TRIM(mz.tcodigo) WHEN 'P0001002' THEN 'H' ELSE 'M' END AS sexo,
+        LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0') AS cod_mort,
+        TRIM(COALESCE(r.tnom_mort, '')) AS nom_mort,
+        mz.tcantid AS cantidad,
+        TRIM(cz.tuser) AS usuario_registro,
+        mz.idmovi AS idmovi
+    FROM cabe_zonas cz
+    INNER JOIN movi_zonas mz ON
+        cz.mark = mz.mark AND cz.treg = mz.treg
+        AND cz.tdoc = mz.tdoc AND cz.tserie = mz.tserie AND cz.tnumfac = mz.tnumfac
+    LEFT JOIN regmotivo_mortalidadgrs r ON r.tcod_mort = mz.tcod_mortgrs
+    WHERE " . implode("\n        AND ", $conds) . "
+    ORDER BY cz.tfecrem ASC, cz.tnumfac ASC, mz.idmovi ASC, mz.tcodigo ASC";
+}
+
+/**
+ * Cabeceras JD4 del periodo (como listado), sin filtrar por código de causa.
+ *
+ * @param array<string, mixed> $filtros
+ */
+function mort_despacho_sql_text_cabeceras_despacho_listado(mysqli $conn, array $filtros): string
+{
+    $conds = [
+        "TRIM(cz.mark) = 'JD4'",
+    ];
+    mort_despacho_append_rango_fecha_registro_cz($conn, $filtros, 'cz', $conds);
+    $condsMovi = ["TRIM(mz.tcodigo) IN ('P0001001','P0001002')"];
+    mort_despacho_append_filtros_cenco_granja($conn, $filtros, 'mz', $condsMovi);
+
+    return "
+    SELECT
+        cz.external_id AS id_registro,
+        cz.tnumfac AS tnumfac_raw,
+        cz.tfecrem AS fecha_registro,
+        " . mort_despacho_sql_expr_cenco('mz') . " AS cenco6,
+        TRIM(CAST(MAX(mz.tcodint) AS CHAR)) AS galpon,
+        COALESCE(SUM(CASE WHEN TRIM(mz.tcodigo) = 'P0001001' THEN mz.tcantid ELSE 0 END), 0) AS machos,
+        COALESCE(SUM(CASE WHEN TRIM(mz.tcodigo) = 'P0001002' THEN mz.tcantid ELSE 0 END), 0) AS hembras,
+        COALESCE(SUM(mz.tcantid), 0) AS total_aves,
+        TRIM(cz.tuser) AS usuario_registro
+    FROM cabe_zonas cz
+    INNER JOIN movi_zonas mz ON
+        cz.mark = mz.mark AND cz.treg = mz.treg
+        AND cz.tdoc = mz.tdoc AND cz.tserie = mz.tserie AND cz.tnumfac = mz.tnumfac
+    WHERE " . implode("\n        AND ", $conds) . "
+      AND " . implode("\n      AND ", $condsMovi) . "
+    GROUP BY cz.external_id, cz.tnumfac, cz.tfecrem, cz.tuser, TRIM(mz.tcencos)
+    ORDER BY cz.tfecrem ASC, cz.tnumfac ASC";
+}
+
+/**
+ * @param array<string, mixed> $filtros
+ * @return array<string, mixed>
+ */
+function mort_despacho_debug_tabla_causas(mysqli $conn, array $filtros): array
+{
+    $rango = mort_ventas_rango($filtros);
+    if ($rango === null) {
+        throw new RuntimeException('Periodo inválido o incompleto.');
+    }
+
+    $filasDetalle = [];
+    $sqlDetalle = mort_despacho_sql_text_causas_listado_detalle($conn, $filtros);
+    $resDet = mysqli_query($conn, $sqlDetalle);
+    if (!$resDet) {
+        throw new RuntimeException('Debug detalle causas: ' . mysqli_error($conn));
+    }
+    while ($row = mysqli_fetch_assoc($resDet)) {
+        $filasDetalle[] = $row;
+    }
+
+    $cabeceras = [];
+    $sqlCab = mort_despacho_sql_text_cabeceras_despacho_listado($conn, $filtros);
+    $resCab = mysqli_query($conn, $sqlCab);
+    if (!$resCab) {
+        throw new RuntimeException('Debug cabeceras listado: ' . mysqli_error($conn));
+    }
+    while ($row = mysqli_fetch_assoc($resCab)) {
+        $cabeceras[] = $row;
+    }
+
+    $porCodigo = mort_despacho_causas_listado_agregadas_sql($conn, $filtros);
+    $tablaUi = mort_despacho_agregar_causas($porCodigo);
+
+    $sinMotivoValido = [];
+    $condsSinMot = mort_despacho_sql_conds_causas_listado($conn, $filtros, false);
+    $sqlSinMot = "
+    SELECT
+        cz.external_id AS id_registro,
+        cz.tfecrem AS fecha_registro,
+        LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0') AS cod_mort,
+        TRIM(COALESCE(r.tnom_mort, '')) AS nom_mort,
+        mz.tcantid AS cantidad,
+        mz.tfectra AS fecha_movimiento
+    FROM cabe_zonas cz
+    INNER JOIN movi_zonas mz ON
+        cz.mark = mz.mark AND cz.treg = mz.treg
+        AND cz.tdoc = mz.tdoc AND cz.tserie = mz.tserie AND cz.tnumfac = mz.tnumfac
+    LEFT JOIN regmotivo_mortalidadgrs r ON r.tcod_mort = mz.tcod_mortgrs
+    WHERE " . implode("\n        AND ", $condsSinMot) . "
+      AND LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0') NOT IN " . mort_despacho_codigos_causa_listado_sql_in() . "
+    ORDER BY cz.tfecrem ASC";
+    $resSin = mysqli_query($conn, $sqlSin);
+    if ($resSin) {
+        while ($row = mysqli_fetch_assoc($resSin)) {
+            $sinMotivoValido[] = $row;
+        }
+    }
+
+    $sumDetalle = 0;
+    foreach ($filasDetalle as $f) {
+        $sumDetalle += (int) ($f['cantidad'] ?? 0);
+    }
+
+    return [
+        'rango' => $rango,
+        'filtros' => [
+            'periodoTipo' => $filtros['periodoTipo'] ?? '',
+            'granja' => $filtros['granja'] ?? '',
+            'campania' => $filtros['campania'] ?? '',
+            'cencos_list' => $filtros['cencos_list'] ?? [],
+        ],
+        'codigos_motivo_despacho' => mort_despacho_codigos_causa_listado_list(),
+        'sql' => [
+            'detalle_tabla1' => trim($sqlDetalle),
+            'cabeceras_listado' => trim($sqlCab),
+        ],
+        'cabeceras_listado_despacho' => $cabeceras,
+        'lineas_usadas_tabla1' => $filasDetalle,
+        'totales' => [
+            'lineas_tabla1' => count($filasDetalle),
+            'aves_tabla1' => $sumDetalle,
+            'cabeceras_listado' => count($cabeceras),
+            'aves_cabeceras' => array_sum(array_map(static function (array $c): int {
+                return (int) ($c['total_aves'] ?? 0);
+            }, $cabeceras)),
+        ],
+        'agregado_por_codigo' => $porCodigo,
+        'tabla1_ui' => $tablaUi,
+        'lineas_excluidas_motivo_no_despacho' => $sinMotivoValido,
+        'nota' => 'tabla1 usa cabecera JD4 + fechaRegistro (tfecrem) y motivos 14/17/18/19 en cada línea movi.',
+    ];
 }
 
 /**
@@ -775,8 +962,10 @@ function mort_despacho_append_filtro_cencos(mysqli $conn, array $filtros, string
 function mort_despacho_causas_slots(): array
 {
     return [
+        ['key' => 'asfixia', 'codigos' => ['17'], 'label' => 'Asfixia'],
         ['key' => 'muerte_subita', 'codigos' => ['14'], 'label' => 'Muerte súbita'],
-        ['key' => 'situacion_especial', 'codigos' => ['17', '19'], 'label' => 'Situación especial'],
+        ['key' => 'degollamiento', 'codigos' => ['19'], 'label' => 'Degollamiento'],
+        ['key' => 'situacion_especial', 'codigos' => [], 'label' => 'Situación especial'],
         ['key' => 'aplastamiento', 'codigos' => ['18'], 'label' => 'Aplastamiento'],
     ];
 }
@@ -1683,6 +1872,7 @@ function mort_despacho_export_sql_preview(mysqli $conn, array $filtros): array
     $fromClaves = mort_despacho_sql_from_claves_s700($conn, $filtros, 'k');
     $sqlClavesS700 = mort_despacho_sql_subquery_claves_s700($conn, $filtros);
     $sqlCausasListado = mort_despacho_sql_text_causas_listado($conn, $filtros);
+    $sqlS808Resumen = mort_despacho_sql_subquery_s808_mort_resumen($conn, $filtros);
     $sqlResumenCenco = mort_despacho_sql_text_resumen_cenco($conn, $filtros);
 
     $rango = mort_ventas_rango($filtros);
@@ -1730,10 +1920,11 @@ WHERE {$whereEtapas}
             'periodoTipo' => $filtros['periodoTipo'] ?? '',
             'cencos_list' => $filtros['cencos_list'] ?? [],
         ],
-        'nota' => 'Tabla 1: cabe_zonas JD4 (listado). Tabla 3: S700 + S808 resumen. Etapas aparte.',
+        'nota' => 'Tabla 3: S700 + subconsulta S808 agregada (tfectra/tcodtra) + JOIN claves. Etapas aparte.',
         'sql' => [
             '1_subquery_s700_solo' => $sqlClavesS700,
             '2_causas_listado_jd4' => trim($sqlCausasListado),
+            '3a_subquery_s808_resumen' => trim($sqlS808Resumen),
             '3_resumen_cenco_s700' => trim($sqlResumenCenco),
             '4_etapas_san_fact' => trim($sqlEtapas),
             '5_nombres_granja' => "SELECT TRIM(codigo) AS codigo, TRIM(nombre) AS nombre FROM ccos WHERE codigo IN ('601000', ...); -- solo granjas del resumen",
