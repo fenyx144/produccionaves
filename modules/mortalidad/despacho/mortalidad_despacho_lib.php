@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /** Revisión desplegable (health / JSON libRev). Compatible PHP >= 7.2. */
 if (!defined('MORT_DESPACHO_LIB_REV')) {
-    define('MORT_DESPACHO_LIB_REV', '20260925u');
+    define('MORT_DESPACHO_LIB_REV', '20260925v');
 }
 
 if (!defined('MORT_DESPACHO_MAX_KEYS_VENTA')) {
@@ -42,8 +42,9 @@ function mort_despacho_aplicar_limites_sesion_db(mysqli $conn): void
         return;
     }
     $ms = $sec * 1000;
-    @mysqli_query($conn, "SET SESSION max_execution_time = {$ms}");
-    @mysqli_query($conn, "SET SESSION max_statement_time = {$sec}");
+    if ($ms > 0) {
+        @mysqli_query($conn, 'SET SESSION max_execution_time = ' . (int) $ms);
+    }
 }
 
 /**
@@ -322,6 +323,34 @@ function mort_despacho_sql_from_claves_s700(mysqli $conn, array $filtros, string
     return '(' . mort_despacho_sql_subquery_claves_s700($conn, $filtros) . ") AS {$a}";
 }
 
+function mort_despacho_sql_join_causa_fact(string $aliasCz = 'cz', string $aliasMz = 'mz', string $aliasD = 'd'): string
+{
+    $cz = preg_replace('/[^a-zA-Z0-9_]/', '', $aliasCz) ?: 'cz';
+    $mz = preg_replace('/[^a-zA-Z0-9_]/', '', $aliasMz) ?: 'mz';
+    $d = preg_replace('/[^a-zA-Z0-9_]/', '', $aliasD) ?: 'd';
+
+    return "
+    LEFT JOIN san_fact_mortalidad_cab fc ON fc.id = {$cz}.external_id
+    LEFT JOIN san_fact_mortalidad_det {$d} ON {$d}.cabId = fc.id
+        AND CAST({$d}.posicion AS UNSIGNED) = CAST({$mz}.idmovi AS UNSIGNED)
+        AND (
+            (UPPER(LEFT(TRIM({$d}.sexo), 1)) = 'M' AND TRIM({$mz}.tcodigo) = 'P0001001')
+            OR (UPPER(LEFT(TRIM({$d}.sexo), 1)) = 'H' AND TRIM({$mz}.tcodigo) = 'P0001002')
+        )";
+}
+
+/** Código causa: movi_zonas o, si viene vacío, san_fact (como detalle listado). */
+function mort_despacho_sql_expr_cod_mort_linea(string $aliasMz = 'mz', string $aliasD = 'd'): string
+{
+    $m = preg_replace('/[^a-zA-Z0-9_]/', '', $aliasMz) ?: 'mz';
+    $d = preg_replace('/[^a-zA-Z0-9_]/', '', $aliasD) ?: 'd';
+
+    return "LPAD(TRIM(COALESCE(
+        NULLIF(TRIM({$m}.tcod_mortgrs), ''),
+        NULLIF(TRIM({$d}.codMortalidad), '')
+    )), 2, '0')";
+}
+
 /**
  * WHERE tabla 1 = listado despacho (fechaRegistro en cabecera JD4; sin filtro tfectra extra).
  *
@@ -332,7 +361,8 @@ function mort_despacho_append_where_causas_listado(mysqli $conn, array $filtros,
 {
     if ($filtrarMotivosDespacho) {
         $causas = mort_despacho_codigos_causa_listado_sql_in();
-        $conds[] = "LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0') IN {$causas}";
+        $expr = mort_despacho_sql_expr_cod_mort_linea('mz', 'd');
+        $conds[] = "{$expr} IN {$causas}";
     }
 }
 
@@ -362,17 +392,20 @@ function mort_despacho_sql_conds_causas_listado(mysqli $conn, array $filtros, bo
 function mort_despacho_sql_text_causas_listado(mysqli $conn, array $filtros): string
 {
     $conds = mort_despacho_sql_conds_causas_listado($conn, $filtros, true);
+    $joinFact = mort_despacho_sql_join_causa_fact('cz', 'mz', 'd');
+    $exprCod = mort_despacho_sql_expr_cod_mort_linea('mz', 'd');
 
     return "
     SELECT
-        LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0') AS cod_mort,
+        {$exprCod} AS cod_mort,
         COALESCE(SUM(mz.tcantid), 0) AS cantidad
     FROM cabe_zonas cz
     INNER JOIN movi_zonas mz ON
         cz.mark = mz.mark AND cz.treg = mz.treg
         AND cz.tdoc = mz.tdoc AND cz.tserie = mz.tserie AND cz.tnumfac = mz.tnumfac
+    {$joinFact}
     WHERE " . implode("\n        AND ", $conds) . "
-    GROUP BY LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0')";
+    GROUP BY {$exprCod}";
 }
 
 /**
@@ -384,6 +417,8 @@ function mort_despacho_sql_text_causas_listado_detalle(mysqli $conn, array $filt
 {
     $conds = mort_despacho_sql_conds_causas_listado($conn, $filtros, true);
     $exprCenco = mort_despacho_sql_expr_cenco('mz');
+    $joinFact = mort_despacho_sql_join_causa_fact('cz', 'mz', 'd');
+    $exprCod = mort_despacho_sql_expr_cod_mort_linea('mz', 'd');
 
     return "
     SELECT
@@ -396,8 +431,10 @@ function mort_despacho_sql_text_causas_listado_detalle(mysqli $conn, array $filt
         TRIM(CAST(mz.tcodint AS CHAR)) AS galpon,
         TRIM(mz.tcodigo) AS tcodigo,
         CASE TRIM(mz.tcodigo) WHEN 'P0001002' THEN 'H' ELSE 'M' END AS sexo,
-        LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0') AS cod_mort,
-        TRIM(COALESCE(r.tnom_mort, '')) AS nom_mort,
+        {$exprCod} AS cod_mort,
+        TRIM(COALESCE(r.tnom_mort, r2.tnom_mort, '')) AS nom_mort,
+        TRIM(COALESCE(mz.tcod_mortgrs, '')) AS cod_mort_zonas,
+        TRIM(COALESCE(d.codMortalidad, '')) AS cod_mort_fact,
         mz.tcantid AS cantidad,
         TRIM(cz.tuser) AS usuario_registro,
         mz.idmovi AS idmovi
@@ -405,7 +442,9 @@ function mort_despacho_sql_text_causas_listado_detalle(mysqli $conn, array $filt
     INNER JOIN movi_zonas mz ON
         cz.mark = mz.mark AND cz.treg = mz.treg
         AND cz.tdoc = mz.tdoc AND cz.tserie = mz.tserie AND cz.tnumfac = mz.tnumfac
+    {$joinFact}
     LEFT JOIN regmotivo_mortalidadgrs r ON r.tcod_mort = mz.tcod_mortgrs
+    LEFT JOIN regmotivo_mortalidadgrs r2 ON r2.tcod_mort = d.codMortalidad
     WHERE " . implode("\n        AND ", $conds) . "
     ORDER BY cz.tfecrem ASC, cz.tnumfac ASC, mz.idmovi ASC, mz.tcodigo ASC";
 }
@@ -449,6 +488,27 @@ function mort_despacho_sql_text_cabeceras_despacho_listado(mysqli $conn, array $
  * @param array<string, mixed> $filtros
  * @return array<string, mixed>
  */
+function mort_despacho_fetch_causas_por_codigo_sql(mysqli $conn, array $filtros): array
+{
+    $sql = mort_despacho_sql_text_causas_listado($conn, $filtros);
+    if (!is_string($sql) || trim($sql) === '') {
+        throw new RuntimeException('SQL causas listado vacío');
+    }
+    $res = mysqli_query($conn, $sql);
+    if (!$res) {
+        throw new RuntimeException('Consulta causas listado: ' . mysqli_error($conn));
+    }
+    $causas = [];
+    while ($row = mysqli_fetch_assoc($res)) {
+        $causas[] = [
+            'cod_mort' => (string) ($row['cod_mort'] ?? ''),
+            'cantidad' => (int) ($row['cantidad'] ?? 0),
+        ];
+    }
+
+    return $causas;
+}
+
 function mort_despacho_debug_tabla_causas(mysqli $conn, array $filtros): array
 {
     $rango = mort_ventas_rango($filtros);
@@ -458,6 +518,9 @@ function mort_despacho_debug_tabla_causas(mysqli $conn, array $filtros): array
 
     $filasDetalle = [];
     $sqlDetalle = mort_despacho_sql_text_causas_listado_detalle($conn, $filtros);
+    if (!is_string($sqlDetalle) || trim($sqlDetalle) === '') {
+        throw new RuntimeException('SQL debug detalle vacío');
+    }
     $resDet = mysqli_query($conn, $sqlDetalle);
     if (!$resDet) {
         throw new RuntimeException('Debug detalle causas: ' . mysqli_error($conn));
@@ -468,6 +531,9 @@ function mort_despacho_debug_tabla_causas(mysqli $conn, array $filtros): array
 
     $cabeceras = [];
     $sqlCab = mort_despacho_sql_text_cabeceras_despacho_listado($conn, $filtros);
+    if (!is_string($sqlCab) || trim($sqlCab) === '') {
+        throw new RuntimeException('SQL debug cabeceras vacío');
+    }
     $resCab = mysqli_query($conn, $sqlCab);
     if (!$resCab) {
         throw new RuntimeException('Debug cabeceras listado: ' . mysqli_error($conn));
@@ -476,28 +542,36 @@ function mort_despacho_debug_tabla_causas(mysqli $conn, array $filtros): array
         $cabeceras[] = $row;
     }
 
-    $porCodigo = mort_despacho_causas_listado_agregadas_sql($conn, $filtros);
+    $porCodigo = mort_despacho_fetch_causas_por_codigo_sql($conn, $filtros);
     $tablaUi = mort_despacho_agregar_causas($porCodigo);
 
     $sinMotivoValido = [];
     $condsSinMot = mort_despacho_sql_conds_causas_listado($conn, $filtros, false);
+    $joinFact = mort_despacho_sql_join_causa_fact('cz', 'mz', 'd');
+    $exprCod = mort_despacho_sql_expr_cod_mort_linea('mz', 'd');
+    $causasIn = mort_despacho_codigos_causa_listado_sql_in();
     $sqlSinMot = "
     SELECT
         cz.external_id AS id_registro,
         cz.tfecrem AS fecha_registro,
-        LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0') AS cod_mort,
-        TRIM(COALESCE(r.tnom_mort, '')) AS nom_mort,
+        {$exprCod} AS cod_mort,
+        TRIM(COALESCE(r.tnom_mort, r2.tnom_mort, '')) AS nom_mort,
         mz.tcantid AS cantidad,
         mz.tfectra AS fecha_movimiento
     FROM cabe_zonas cz
     INNER JOIN movi_zonas mz ON
         cz.mark = mz.mark AND cz.treg = mz.treg
         AND cz.tdoc = mz.tdoc AND cz.tserie = mz.tserie AND cz.tnumfac = mz.tnumfac
+    {$joinFact}
     LEFT JOIN regmotivo_mortalidadgrs r ON r.tcod_mort = mz.tcod_mortgrs
+    LEFT JOIN regmotivo_mortalidadgrs r2 ON r2.tcod_mort = d.codMortalidad
     WHERE " . implode("\n        AND ", $condsSinMot) . "
-      AND LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0') NOT IN " . mort_despacho_codigos_causa_listado_sql_in() . "
+      AND {$exprCod} NOT IN {$causasIn}
     ORDER BY cz.tfecrem ASC";
-    $resSin = mysqli_query($conn, $sqlSin);
+    if (!is_string($sqlSinMot) || trim($sqlSinMot) === '') {
+        throw new RuntimeException('SQL debug excluidas vacío');
+    }
+    $resSin = mysqli_query($conn, $sqlSinMot);
     if ($resSin) {
         while ($row = mysqli_fetch_assoc($resSin)) {
             $sinMotivoValido[] = $row;
@@ -655,19 +729,7 @@ function mort_despacho_fetch_principal_unificado(mysqli $conn, array $filtros): 
         return $cache[$cacheId];
     }
 
-    $sqlCausas = mort_despacho_sql_text_causas_listado($conn, $filtros);
-    $resCausas = mysqli_query($conn, $sqlCausas);
-    if (!$resCausas) {
-        throw new RuntimeException('Consulta causas listado: ' . mysqli_error($conn));
-    }
-
-    $causas = [];
-    while ($row = mysqli_fetch_assoc($resCausas)) {
-        $causas[] = [
-            'cod_mort' => (string) ($row['cod_mort'] ?? ''),
-            'cantidad' => (int) ($row['cantidad'] ?? 0),
-        ];
-    }
+    $causas = mort_despacho_fetch_causas_por_codigo_sql($conn, $filtros);
 
     $sqlResumen = mort_despacho_sql_text_resumen_cenco($conn, $filtros);
     $res = mysqli_query($conn, $sqlResumen);
