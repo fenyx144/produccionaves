@@ -853,6 +853,12 @@ function mort_listado_marks_tipo(string $tipoMortalidad): array
     }
 }
 
+/** Motivos tipo despacho (misma lista que get_motivos_listado.php → despacho). */
+function mort_listado_codigos_motivo_despacho(): array
+{
+    return ['05', '14', '17', '18', '19'];
+}
+
 /**
  * Valida que una fecha pertenezca al periodo contable abierto usando
  * las tablas conempre (anio), indi (mes) y dola (dia).

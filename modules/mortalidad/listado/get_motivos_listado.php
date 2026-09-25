@@ -26,7 +26,9 @@ mysqli_set_charset($conn, 'latin1');
 $codigosPorTipo = [
     'transporte' => ['01', '02'],
     'produccion' => ['03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '15', '16'],
-    'despacho' => ['14', '17', '18', '19'],
+    'despacho' => function_exists('mort_listado_codigos_motivo_despacho')
+        ? mort_listado_codigos_motivo_despacho()
+        : ['14', '17', '18', '19'],
 ];
 
 $sql = 'SELECT tcod_mort, tnom_mort FROM regmotivo_mortalidadgrs ORDER BY tnom_mort';
