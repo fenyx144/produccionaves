@@ -110,6 +110,18 @@ $ultimoDiaMes = date('Y-m-t');
             animation: mdp-spin 0.8s linear infinite;
         }
         @keyframes mdp-spin { to { transform: rotate(360deg); } }
+        .mdp-pager {
+            display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+            gap: 0.75rem; margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid #e2e8f0;
+            font-size: 0.8125rem; color: #475569;
+        }
+        .mdp-pager-actions { display: flex; gap: 0.5rem; align-items: center; }
+        .mdp-pager-btn {
+            background: #fff; border: 1px solid #cbd5e1; color: #334155; border-radius: 0.5rem;
+            padding: 0.35rem 0.75rem; font-size: 0.8125rem; font-weight: 600; cursor: pointer;
+        }
+        .mdp-pager-btn:hover:not(:disabled) { background: #f1f5f9; }
+        .mdp-pager-btn:disabled { opacity: 0.45; cursor: not-allowed; }
         .selector-display input { cursor: pointer; background: #fff; }
         body.mrt-dsp-modal-granjas-open .tabla-listado-wrapper { filter: none; }
         #mrt-dsp-modal-granjas .gmc-modal-inner { max-width: 920px; }
@@ -234,6 +246,7 @@ $ultimoDiaMes = date('Y-m-t');
             <div class="table-wrapper" id="mdp-tabla-resumen">
                 <p class="mdp-empty">Pulse Buscar para cargar el resumen.</p>
             </div>
+            <div id="mdp-resumen-pager" class="mdp-pager lay-hidden" aria-label="Paginación resumen"></div>
         </div>
         </div>
     </div>
@@ -253,7 +266,8 @@ window.MORT_DESPACHO_CFG = {
     campaniasUrl: <?= json_encode($campaniasApiUrl, JSON_UNESCAPED_UNICODE) ?>,
     granjasMetaUrl: <?= json_encode($granjasMetaUrl, JSON_UNESCAPED_UNICODE) ?>,
     filtrosApiUrl: <?= json_encode($filtrosApiUrl, JSON_UNESCAPED_UNICODE) ?>,
-    autoCargarAnalisis: true
+    autoCargarAnalisis: true,
+    resumenPageSize: 50
 };
 </script>
 <script src="../../../assets/js/gmc-periodo-campanias.js?v=<?php echo (int) @filemtime(__DIR__ . '/../../../assets/js/gmc-periodo-campanias.js'); ?>"></script>

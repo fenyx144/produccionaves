@@ -100,13 +100,17 @@ try {
     }
     $slotAdquirido = true;
 
-    $bloque = strtolower(trim((string) ($_GET['bloque'] ?? $_POST['bloque'] ?? 'completo')));
+    $inputRaw = array_merge($_GET, $_POST);
+    $bloque = strtolower(trim((string) ($inputRaw['bloque'] ?? 'completo')));
     if ($bloque === 'principal') {
         $data = mort_despacho_analisis_bloque_principal($conn, $filtros);
     } elseif ($bloque === 'etapas') {
         $data = mort_despacho_analisis_bloque_etapas($conn, $filtros);
+    } elseif ($bloque === 'resumen') {
+        $pag = mort_despacho_parse_resumen_paginacion($inputRaw);
+        $data = mort_despacho_analisis_bloque_resumen($conn, $filtros, $pag);
     } else {
-        $data = mort_despacho_analisis_completo($conn, $filtros);
+        $data = mort_despacho_analisis_completo($conn, $filtros, $inputRaw);
     }
     mysqli_close($conn);
 
@@ -125,6 +129,12 @@ try {
     }
     if (array_key_exists('resumenGranjas', $data)) {
         $payload['resumenGranjas'] = $data['resumenGranjas'];
+    }
+    if (array_key_exists('resumenPaginacion', $data)) {
+        $payload['resumenPaginacion'] = $data['resumenPaginacion'];
+    }
+    if (array_key_exists('resumenTotales', $data)) {
+        $payload['resumenTotales'] = $data['resumenTotales'];
     }
 
     $jsonFlags = JSON_UNESCAPED_UNICODE;

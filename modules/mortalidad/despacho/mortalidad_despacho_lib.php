@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /** Revisión desplegable (health / JSON libRev). Compatible PHP >= 7.2. */
 if (!defined('MORT_DESPACHO_LIB_REV')) {
-    define('MORT_DESPACHO_LIB_REV', '20260925x');
+    define('MORT_DESPACHO_LIB_REV', '20260925y');
 }
 
 if (!defined('MORT_DESPACHO_MAX_KEYS_VENTA')) {
@@ -18,14 +18,21 @@ if (!defined('MORT_DESPACHO_QUERY_TIME_SEC')) {
     define('MORT_DESPACHO_QUERY_TIME_SEC', 90);
 }
 
-/** Sin filtro de cencos: como mucho un mes calendario. */
 if (!defined('MORT_DESPACHO_MAX_DIAS_ABSOLUTO')) {
     define('MORT_DESPACHO_MAX_DIAS_ABSOLUTO', 366);
 }
 
-/** Una consulta pesada a la vez por sesión (evita duplicar escaneos S700 en paralelo). */
+if (!defined('MORT_DESPACHO_RESUMEN_PAGE_SIZE_DEFAULT')) {
+    define('MORT_DESPACHO_RESUMEN_PAGE_SIZE_DEFAULT', 50);
+}
+
+if (!defined('MORT_DESPACHO_RESUMEN_PAGE_SIZE_MAX')) {
+    define('MORT_DESPACHO_RESUMEN_PAGE_SIZE_MAX', 200);
+}
+
+/** Consultas de análisis en paralelo por sesión (causas + etapas + resumen paginado). */
 if (!defined('MORT_DESPACHO_MAX_CONCURRENT_PER_SESSION')) {
-    define('MORT_DESPACHO_MAX_CONCURRENT_PER_SESSION', 1);
+    define('MORT_DESPACHO_MAX_CONCURRENT_PER_SESSION', 3);
 }
 
 /**
@@ -667,11 +674,11 @@ function mort_despacho_sql_subquery_s808_mort_resumen(mysqli $conn, array $filtr
 }
 
 /**
- * Tabla 3: resumen por cenco (S700 + S808 criterio ventas/resumen).
+ * Tabla 3: subconsulta agregada por fecha + cenco6 (S700 + S808 resumen).
  *
  * @param array<string, mixed> $filtros
  */
-function mort_despacho_sql_text_resumen_cenco(mysqli $conn, array $filtros): string
+function mort_despacho_sql_resumen_cenco_agregado(mysqli $conn, array $filtros): string
 {
     $fromClavesResumen = mort_despacho_sql_from_claves_s700($conn, $filtros, 'k');
     $fromMort = '(' . mort_despacho_sql_subquery_s808_mort_resumen($conn, $filtros) . ') AS m';
@@ -693,6 +700,106 @@ function mort_despacho_sql_text_resumen_cenco(mysqli $conn, array $filtros): str
         )
     GROUP BY k.fecha, k.cenco6
     HAVING SUM(k.venta_macho + k.venta_hembra) > 0";
+}
+
+/**
+ * Tabla 3: resumen por cenco (consulta completa sin paginar; benchmark / diagnóstico).
+ *
+ * @param array<string, mixed> $filtros
+ */
+function mort_despacho_sql_text_resumen_cenco(mysqli $conn, array $filtros): string
+{
+    return mort_despacho_sql_resumen_cenco_agregado($conn, $filtros);
+}
+
+/**
+ * @return array{page: int, pageSize: int, offset: int}
+ */
+function mort_despacho_parse_resumen_paginacion(array $input): array
+{
+    $page = (int) ($input['resumenPage'] ?? $input['page'] ?? 1);
+    if ($page < 1) {
+        $page = 1;
+    }
+    $defaultSize = (int) MORT_DESPACHO_RESUMEN_PAGE_SIZE_DEFAULT;
+    $maxSize = (int) MORT_DESPACHO_RESUMEN_PAGE_SIZE_MAX;
+    $pageSize = (int) ($input['resumenPageSize'] ?? $input['pageSize'] ?? $defaultSize);
+    if ($pageSize < 1) {
+        $pageSize = $defaultSize;
+    }
+    if ($pageSize > $maxSize) {
+        $pageSize = $maxSize;
+    }
+
+    return [
+        'page' => $page,
+        'pageSize' => $pageSize,
+        'offset' => ($page - 1) * $pageSize,
+    ];
+}
+
+/**
+ * Resumen cenco paginado + totales del periodo (3 consultas ligeras vs. volcar todo en PHP).
+ *
+ * @param array<string, mixed> $filtros
+ * @return array{
+ *   total: int,
+ *   filas: list<array{fecha: string, cencos: string, cantidadDespachada: float, muertos: int}>,
+ *   totales: array{cantidadDespachada: float, muertos: int, porcentajeMortDespacho: float}
+ * }
+ */
+function mort_despacho_fetch_resumen_cenco_paginado(mysqli $conn, array $filtros, array $pag): array
+{
+    $inner = mort_despacho_sql_resumen_cenco_agregado($conn, $filtros);
+    $offset = (int) $pag['offset'];
+    $limit = (int) $pag['pageSize'];
+
+    $sqlStats = "
+    SELECT
+        COUNT(*) AS n,
+        COALESCE(SUM(q.cantidadDespachada), 0) AS cantidadDespachada,
+        COALESCE(SUM(q.muertos), 0) AS muertos
+    FROM ({$inner}) AS q";
+    $resStats = mysqli_query($conn, $sqlStats);
+    if (!$resStats) {
+        throw new RuntimeException('Consulta resumen (estadísticas): ' . mysqli_error($conn));
+    }
+    $rowTot = mysqli_fetch_assoc($resStats) ?: [];
+    $total = (int) ($rowTot['n'] ?? 0);
+    $sumDesp = (float) ($rowTot['cantidadDespachada'] ?? 0);
+    $sumMuertos = (int) ($rowTot['muertos'] ?? 0);
+    $pctTot = $sumDesp > 0 ? round($sumMuertos * 100 / $sumDesp, 2) : 0.0;
+
+    $filas = [];
+    if ($total > 0 && $limit > 0) {
+        $sqlPage = "
+        SELECT q.fecha, q.cenco6, q.cantidadDespachada, q.muertos
+        FROM ({$inner}) AS q
+        ORDER BY q.fecha DESC, q.cenco6 ASC
+        LIMIT {$offset}, {$limit}";
+        $resPage = mysqli_query($conn, $sqlPage);
+        if (!$resPage) {
+            throw new RuntimeException('Consulta resumen (página): ' . mysqli_error($conn));
+        }
+        while ($row = mysqli_fetch_assoc($resPage)) {
+            $filas[] = [
+                'fecha' => (string) ($row['fecha'] ?? ''),
+                'cencos' => (string) ($row['cenco6'] ?? ''),
+                'cantidadDespachada' => (float) ($row['cantidadDespachada'] ?? 0),
+                'muertos' => (int) ($row['muertos'] ?? 0),
+            ];
+        }
+    }
+
+    return [
+        'total' => $total,
+        'filas' => $filas,
+        'totales' => [
+            'cantidadDespachada' => $sumDesp,
+            'muertos' => $sumMuertos,
+            'porcentajeMortDespacho' => $pctTot,
+        ],
+    ];
 }
 
 /** @param array<string, mixed> $filtros */
@@ -1677,7 +1784,7 @@ function mort_despacho_consultar_resumen_granjas(mysqli $conn, array $filtros, ?
  * @param list<array{fecha: string, cencos: string, cantidadDespachada: float, muertos: int}> $filasCenco
  * @return list<array<string, mixed>>
  */
-function mort_despacho_consultar_resumen_granjas_desde_filas_cenco(mysqli $conn, array $filasCenco): array
+function mort_despacho_consultar_resumen_granjas_desde_filas_cenco(mysqli $conn, array $filasCenco, int $numeroInicio = 1): array
 {
     $filas = [];
     foreach ($filasCenco as $row) {
@@ -1701,20 +1808,20 @@ function mort_despacho_consultar_resumen_granjas_desde_filas_cenco(mysqli $conn,
         ];
     }
 
-    return mort_despacho_empaquetar_filas_resumen_ui($conn, $filas);
+    return mort_despacho_empaquetar_filas_resumen_ui($conn, $filas, $numeroInicio);
 }
 
 /**
  * @param list<array<string, mixed>> $filas
  * @return list<array<string, mixed>>
  */
-function mort_despacho_empaquetar_filas_resumen_ui(mysqli $conn, array $filas): array
+function mort_despacho_empaquetar_filas_resumen_ui(mysqli $conn, array $filas, int $numeroInicio = 1): array
 {
     if ($filas === []) {
         return [];
     }
 
-    if (count($filas) > 8000) {
+    if ($numeroInicio <= 1 && count($filas) > MORT_DESPACHO_MAX_KEYS_VENTA) {
         throw new RuntimeException(
             'Demasiados registros con despacho (' . count($filas) . '). Acote el periodo o el filtro de granjas.'
         );
@@ -1735,7 +1842,7 @@ function mort_despacho_empaquetar_filas_resumen_ui(mysqli $conn, array $filas): 
     }
     $nombres = mort_despacho_nombres_granja_lista($conn, array_keys($g3List));
     $out = [];
-    $n = 0;
+    $n = max(0, $numeroInicio - 1);
     foreach ($filas as $row) {
         $granja = $row['granjaCod'];
         $campania = $row['campania'];
@@ -1809,14 +1916,50 @@ function mort_despacho_analisis_bloque_principal(mysqli $conn, array $filtros): 
         throw new RuntimeException('Periodo inválido o incompleto.');
     }
 
-    $principal = mort_despacho_fetch_principal_unificado($conn, $filtros);
-    $causas = mort_despacho_agregar_causas($principal['causas']);
-    $resumen = mort_despacho_consultar_resumen_granjas_desde_filas_cenco($conn, $principal['resumen']);
+    $causasRaw = mort_despacho_fetch_causas_por_codigo_sql($conn, $filtros);
+    $causas = mort_despacho_agregar_causas($causasRaw);
 
     return [
         'rango' => $rango,
         'causas' => $causas,
+    ];
+}
+
+/**
+ * Tabla resumen paginada (SQL LIMIT).
+ *
+ * @param array<string, mixed> $filtros
+ * @param array{page: int, pageSize: int, offset: int} $pag
+ * @return array<string, mixed>
+ */
+function mort_despacho_analisis_bloque_resumen(mysqli $conn, array $filtros, array $pag): array
+{
+    $rango = mort_ventas_rango($filtros);
+    if ($rango === null) {
+        throw new RuntimeException('Periodo inválido o incompleto.');
+    }
+
+    $fetch = mort_despacho_fetch_resumen_cenco_paginado($conn, $filtros, $pag);
+    $numeroInicio = (int) $pag['offset'] + 1;
+    $resumen = mort_despacho_consultar_resumen_granjas_desde_filas_cenco($conn, $fetch['filas'], $numeroInicio);
+    $total = $fetch['total'];
+    $pageSize = (int) $pag['pageSize'];
+    $page = (int) $pag['page'];
+    $totalPaginas = $pageSize > 0 ? (int) ceil($total / $pageSize) : 0;
+    if ($totalPaginas > 0 && $page > $totalPaginas) {
+        $page = $totalPaginas;
+    }
+
+    return [
+        'rango' => $rango,
         'resumenGranjas' => $resumen,
+        'resumenPaginacion' => [
+            'page' => $page,
+            'pageSize' => $pageSize,
+            'totalFilas' => $total,
+            'totalPaginas' => $totalPaginas,
+        ],
+        'resumenTotales' => $fetch['totales'],
     ];
 }
 
@@ -1843,16 +1986,20 @@ function mort_despacho_analisis_bloque_etapas(mysqli $conn, array $filtros): arr
     ];
 }
 
-function mort_despacho_analisis_completo(mysqli $conn, array $filtros): array
+function mort_despacho_analisis_completo(mysqli $conn, array $filtros, array $inputPaginacion = []): array
 {
     $principal = mort_despacho_analisis_bloque_principal($conn, $filtros);
     $etapasBlock = mort_despacho_analisis_bloque_etapas($conn, $filtros);
+    $pag = mort_despacho_parse_resumen_paginacion($inputPaginacion);
+    $resumenBlock = mort_despacho_analisis_bloque_resumen($conn, $filtros, $pag);
 
     return [
         'rango' => $principal['rango'],
         'causas' => $principal['causas'],
         'etapas' => $etapasBlock['etapas'],
-        'resumenGranjas' => $principal['resumenGranjas'],
+        'resumenGranjas' => $resumenBlock['resumenGranjas'],
+        'resumenPaginacion' => $resumenBlock['resumenPaginacion'],
+        'resumenTotales' => $resumenBlock['resumenTotales'],
     ];
 }
 
@@ -2137,12 +2284,21 @@ function mort_despacho_benchmark_analisis(mysqli $conn, array $filtros, bool $ex
         return ['total' => (int) ($data['total'] ?? 0)];
     });
 
-    $pasos[] = mort_despacho_benchmark_paso_php('bloque_principal', 'UI bloque principal (2 SQL + JSON; tras sql_* puede ir en caché)', static function () use ($conn, $filtros): array {
+    $pasos[] = mort_despacho_benchmark_paso_php('bloque_principal', 'UI bloque principal (causas JD4)', static function () use ($conn, $filtros): array {
         $data = mort_despacho_analisis_bloque_principal($conn, $filtros);
 
         return [
-            'filas' => count($data['resumenGranjas'] ?? []),
             'total' => (int) (($data['causas']['total'] ?? 0)),
+        ];
+    });
+
+    $pasos[] = mort_despacho_benchmark_paso_php('bloque_resumen_p1', 'UI resumen paginado (página 1)', static function () use ($conn, $filtros): array {
+        $pag = mort_despacho_parse_resumen_paginacion([]);
+        $data = mort_despacho_analisis_bloque_resumen($conn, $filtros, $pag);
+
+        return [
+            'filas' => count($data['resumenGranjas'] ?? []),
+            'totalFilas' => (int) (($data['resumenPaginacion']['totalFilas'] ?? 0)),
         ];
     });
 

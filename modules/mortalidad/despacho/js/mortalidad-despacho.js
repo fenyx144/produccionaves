@@ -4,7 +4,11 @@
     const cfg = window.MORT_DESPACHO_CFG || {};
     /** Al abrir: mes actual si autoCargarAnalisis (dashboard). */
     const autoCargarAnalisis = cfg.autoCargarAnalisis === true;
+    const resumenPageSize = Math.max(1, Math.min(200, Number(cfg.resumenPageSize) || 50));
     let cargando = false;
+    let cargandoResumen = false;
+    let resumenPaginaActual = 1;
+    let resumenRangoTexto = '';
     let mrtDspGmc = null;
     let selCodes = [];
     let campByGranja = {};
@@ -306,22 +310,43 @@
         );
     }
 
-    function pintarResumen(filas, rangoTexto) {
+    function pintarResumenPager(paginacion) {
+        const $p = $('#mdp-resumen-pager');
+        if (!paginacion || !paginacion.totalFilas || paginacion.totalFilas <= paginacion.pageSize) {
+            $p.addClass('lay-hidden').empty();
+            return;
+        }
+        const page = Number(paginacion.page) || 1;
+        const pageSize = Number(paginacion.pageSize) || resumenPageSize;
+        const total = Number(paginacion.totalFilas) || 0;
+        const totalPag = Number(paginacion.totalPaginas) || Math.ceil(total / pageSize);
+        const desde = total === 0 ? 0 : (page - 1) * pageSize + 1;
+        const hasta = Math.min(page * pageSize, total);
+        const prevDis = page <= 1 || cargandoResumen ? ' disabled' : '';
+        const nextDis = page >= totalPag || cargandoResumen ? ' disabled' : '';
+        $p.removeClass('lay-hidden').html(
+            '<span>Mostrando ' + desde + '–' + hasta + ' de ' + formatearNumero(total) + ' filas</span>'
+            + '<div class="mdp-pager-actions">'
+            + '<button type="button" class="mdp-pager-btn" data-mdp-resumen-nav="prev"' + prevDis + '>Anterior</button>'
+            + '<span>Página ' + page + ' / ' + totalPag + '</span>'
+            + '<button type="button" class="mdp-pager-btn" data-mdp-resumen-nav="next"' + nextDis + '>Siguiente</button>'
+            + '</div>'
+        );
+    }
+
+    function pintarResumen(filas, rangoTexto, paginacion, totalesGlobales) {
         setTituloPanel('#mdp-titulo-resumen', 'Resumen de mortalidad por granja', rangoTexto);
         if (!filas || filas.length === 0) {
             $('#mdp-tabla-resumen').html('<p class="mdp-empty">Sin despacho (S700) en el periodo con los filtros actuales.</p>');
+            pintarResumenPager(null);
             return;
         }
-        let sumDesp = 0;
-        let sumMuertos = 0;
-        const rows = filas.map(function (r, idx) {
+        const rows = filas.map(function (r) {
             const cantNum = Number(r.cantidadDespachada != null ? r.cantidadDespachada : r.cantidad) || 0;
             const muertosNum = Number(r.muertos) || 0;
             const pctNum = Number(r.porcentajeMortDespacho != null ? r.porcentajeMortDespacho : r.porcentaje) || 0;
-            sumDesp += cantNum;
-            sumMuertos += muertosNum;
             return {
-                numero: idx + 1,
+                numero: r.numero != null ? r.numero : 0,
                 fecha: formatearFechaYMDslash(r.fecha),
                 cencos: r.cencos,
                 granja: r.granja,
@@ -331,7 +356,20 @@
                 _rowClass: cantNum <= 0 ? 'mdp-fila-sin-despacho' : ''
             };
         });
-        const pctTotal = sumDesp > 0 ? round2(sumMuertos * 100 / sumDesp) : 0;
+        let sumDespPie = 0;
+        let sumMuertosPie = 0;
+        if (totalesGlobales) {
+            sumDespPie = Number(totalesGlobales.cantidadDespachada) || 0;
+            sumMuertosPie = Number(totalesGlobales.muertos) || 0;
+        } else {
+            filas.forEach(function (r) {
+                sumDespPie += Number(r.cantidadDespachada != null ? r.cantidadDespachada : r.cantidad) || 0;
+                sumMuertosPie += Number(r.muertos) || 0;
+            });
+        }
+        const pctTotalPie = totalesGlobales
+            ? Number(totalesGlobales.porcentajeMortDespacho) || 0
+            : (sumDespPie > 0 ? round2(sumMuertosPie * 100 / sumDespPie) : 0);
         renderTablaSimple(
             '#mdp-tabla-resumen',
             [
@@ -356,12 +394,51 @@
             rows,
             function (_c, idx) {
                 if (idx === 1) return 'Total';
-                if (idx === 4) return formatearNumero(sumDesp, 2);
-                if (idx === 5) return sumMuertos > 0 ? formatearNumero(sumMuertos) : '-';
-                if (idx === 6) return formatearNumero(pctTotal, 2) + '%';
+                if (idx === 4) return formatearNumero(sumDespPie, 2);
+                if (idx === 5) return sumMuertosPie > 0 ? formatearNumero(sumMuertosPie) : '-';
+                if (idx === 6) return formatearNumero(pctTotalPie, 2) + '%';
                 return '';
             }
         );
+        pintarResumenPager(paginacion);
+    }
+
+    function aplicarRespuestaResumen(j) {
+        if (!j || !j.success) {
+            return false;
+        }
+        resumenRangoTexto = tituloPeriodo(j.rango);
+        resumenPaginaActual = Number((j.resumenPaginacion && j.resumenPaginacion.page) || 1);
+        pintarResumen(j.resumenGranjas || [], resumenRangoTexto, j.resumenPaginacion || null, j.resumenTotales || null);
+        return true;
+    }
+
+    function cargarResumenPagina(page) {
+        if (cargandoResumen || cargando) {
+            return;
+        }
+        const pag = Math.max(1, Number(page) || 1);
+        cargandoResumen = true;
+        $('#mdp-resumen-pager .mdp-pager-btn').prop('disabled', true);
+        const params = leerFiltrosFormulario();
+        params.resumenPage = String(pag);
+        params.resumenPageSize = String(resumenPageSize);
+        ajaxAnalisisBloque(params, 'resumen', 95000)
+            .done(function (j) {
+                if (!aplicarRespuestaResumen(j)) {
+                    Swal.fire({ icon: 'error', title: 'Error', text: mensajeErrorAjax('', j, 200) });
+                }
+            })
+            .fail(function (xhr, status) {
+                let j = null;
+                try {
+                    j = xhr.responseJSON;
+                } catch (e) { /* ignore */ }
+                Swal.fire({ icon: 'error', title: 'Error', text: mensajeErrorAjax(status, j, xhr.status) });
+            })
+            .always(function () {
+                cargandoResumen = false;
+            });
     }
 
     function round2(n) {
@@ -414,11 +491,27 @@
     function cargarAnalisis() {
         if (cargando) return;
         cargando = true;
+        resumenPaginaActual = 1;
         const params = leerFiltrosFormulario();
+        params.resumenPage = '1';
+        params.resumenPageSize = String(resumenPageSize);
         setIndicadorCargaMdp(true, 'Cargando análisis…');
 
         const reqPrincipal = ajaxAnalisisBloque(params, 'principal', 95000);
         const reqEtapas = ajaxAnalisisBloque(params, 'etapas', 95000);
+        const reqResumen = ajaxAnalisisBloque(params, 'resumen', 95000);
+
+        reqResumen
+            .done(function (j) {
+                if (!aplicarRespuestaResumen(j)) {
+                    $('#mdp-tabla-resumen').html('<p class="mdp-empty">No se pudo cargar el resumen.</p>');
+                    pintarResumenPager(null);
+                }
+            })
+            .fail(function () {
+                $('#mdp-tabla-resumen').html('<p class="mdp-empty">No se pudo cargar el resumen.</p>');
+                pintarResumenPager(null);
+            });
 
         reqPrincipal
             .done(function (j) {
@@ -427,7 +520,6 @@
                     return;
                 }
                 const rangoTexto = tituloPeriodo(j.rango);
-                pintarResumen(j.resumenGranjas || [], rangoTexto);
                 pintarCausas(j.causas || { filas: [], total: 0 }, rangoTexto);
             })
             .fail(function (xhr, status) {
@@ -437,7 +529,6 @@
                 } catch (e) { /* ignore */ }
                 const msg = mensajeErrorAjax(status, j, xhr.status);
                 Swal.fire({ icon: 'error', title: 'Error', text: msg });
-                $('#mdp-tabla-resumen').html('<p class="mdp-empty">No se pudo cargar el análisis.</p>');
                 $('#mdp-tabla-causas').html('<p class="mdp-empty">No se pudo cargar el análisis.</p>');
             });
 
@@ -453,9 +544,19 @@
                 $('#mdp-tabla-etapas').html('<p class="mdp-empty">No se pudo cargar etapas.</p>');
             });
 
-        $.when(reqPrincipal, reqEtapas).always(function () {
+        $.when(reqPrincipal, reqEtapas, reqResumen).always(function () {
             cargando = false;
             setIndicadorCargaMdp(false);
+        });
+
+        $(document).off('click.mdpResumenPager', '#mdp-resumen-pager [data-mdp-resumen-nav]');
+        $(document).on('click.mdpResumenPager', '#mdp-resumen-pager [data-mdp-resumen-nav]', function () {
+            const nav = ($(this).attr('data-mdp-resumen-nav') || '').trim();
+            if (nav === 'prev') {
+                cargarResumenPagina(resumenPaginaActual - 1);
+            } else if (nav === 'next') {
+                cargarResumenPagina(resumenPaginaActual + 1);
+            }
         });
     }
 
