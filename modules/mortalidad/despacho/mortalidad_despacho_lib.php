@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /** Revisión desplegable (health / JSON libRev). Compatible PHP >= 7.2. */
 if (!defined('MORT_DESPACHO_LIB_REV')) {
-    define('MORT_DESPACHO_LIB_REV', '20260925q');
+    define('MORT_DESPACHO_LIB_REV', '20260925r');
 }
 
 if (!defined('MORT_DESPACHO_MAX_KEYS_VENTA')) {
@@ -743,13 +743,14 @@ function mort_despacho_codigos_causa_listado_sql_in(): string
     return '(' . implode(',', $quoted) . ')';
 }
 
-/** @return list<string> Motivos despacho (get_motivos_listado.php); fallback si listado aún no desplegado. */
+/**
+ * Motivos tipo despacho — misma lista que get_motivos_listado.php (14, 17, 18, 19).
+ * Definido aquí para no depender de modules/mortalidad/listado/ en el despliegue.
+ *
+ * @return list<string>
+ */
 function mort_despacho_codigos_causa_listado_list(): array
 {
-    if (function_exists('mort_listado_codigos_motivo_despacho')) {
-        return mort_listado_codigos_motivo_despacho();
-    }
-
     return ['14', '17', '18', '19'];
 }
 
@@ -1666,5 +1667,239 @@ WHERE {$whereEtapas}
         'join_on_s808_resumen' => mort_despacho_sql_on_s808_resumen('mz', 'k'),
         'codigos_causa_listado' => mort_despacho_codigos_causa_listado_sql_in(),
         'codigos_causa_resumen' => mort_despacho_codigos_causa_resumen_sql_in(),
+    ];
+}
+
+/**
+ * Ejecuta SQL y mide query + fetch (filas materializadas en PHP).
+ *
+ * @return array{ms_total: float, ms_query: float, ms_fetch: float, filas: int, ok: bool, error: ?string}
+ */
+function mort_despacho_medir_ejecucion_sql(mysqli $conn, string $sql): array
+{
+    $t0 = microtime(true);
+    $res = mysqli_query($conn, $sql);
+    $tQuery = microtime(true);
+    $filas = 0;
+    $error = null;
+    if (!$res) {
+        $error = mysqli_error($conn);
+    } else {
+        while (mysqli_fetch_assoc($res)) {
+            $filas++;
+        }
+    }
+    $t1 = microtime(true);
+
+    return [
+        'ms_total' => round(($t1 - $t0) * 1000, 2),
+        'ms_query' => round(($tQuery - $t0) * 1000, 2),
+        'ms_fetch' => round(($t1 - $tQuery) * 1000, 2),
+        'filas' => $filas,
+        'ok' => $error === null,
+        'error' => $error,
+    ];
+}
+
+/**
+ * @return array{id: string, label: string, tipo: string, ms_total: float, ms_query: float, ms_fetch: float, filas: int, ok: bool, error: ?string}
+ */
+function mort_despacho_benchmark_paso_sql(mysqli $conn, string $id, string $label, string $sql): array
+{
+    $m = mort_despacho_medir_ejecucion_sql($conn, $sql);
+
+    return array_merge(
+        ['id' => $id, 'label' => $label, 'tipo' => 'sql'],
+        $m
+    );
+}
+
+/**
+ * @param callable(): mixed $fn
+ * @return array{id: string, label: string, tipo: string, ms_total: float, ok: bool, error: ?string, meta: array<string, mixed>}
+ */
+function mort_despacho_benchmark_paso_php(string $id, string $label, callable $fn): array
+{
+    $t0 = microtime(true);
+    $error = null;
+    $meta = [];
+    try {
+        $result = $fn();
+        if (is_array($result)) {
+            $meta = $result;
+        }
+    } catch (Throwable $e) {
+        $error = $e->getMessage();
+    }
+    $t1 = microtime(true);
+
+    return [
+        'id' => $id,
+        'label' => $label,
+        'tipo' => 'php',
+        'ms_total' => round(($t1 - $t0) * 1000, 2),
+        'ms_query' => 0.0,
+        'ms_fetch' => 0.0,
+        'filas' => isset($meta['filas']) ? (int) $meta['filas'] : (isset($meta['total']) ? (int) $meta['total'] : 0),
+        'ok' => $error === null,
+        'error' => $error,
+        'meta' => $meta,
+    ];
+}
+
+/**
+ * Benchmark del análisis despacho: tiempos por paso y cuál es el más pesado.
+ *
+ * @param array<string, mixed> $filtros
+ * @return array<string, mixed>
+ */
+function mort_despacho_benchmark_analisis(mysqli $conn, array $filtros, bool $extendido = false): array
+{
+    $rango = mort_ventas_rango($filtros);
+    if ($rango === null) {
+        throw new RuntimeException('Periodo inválido o incompleto.');
+    }
+
+    $preview = mort_despacho_export_sql_preview($conn, $filtros);
+    $sqlS700 = (string) ($preview['sql']['1_subquery_s700_solo'] ?? '');
+    $sqlCausas = (string) ($preview['sql']['2_causas_listado_jd4'] ?? '');
+    $sqlResumen = (string) ($preview['sql']['3_resumen_cenco_s700'] ?? '');
+    $sqlEtapas = (string) ($preview['sql']['4_etapas_san_fact'] ?? '');
+
+    $pasos = [];
+
+    $pasos[] = mort_despacho_benchmark_paso_php('bloque_principal', 'UI bloque principal (2 SQL + armado JSON)', static function () use ($conn, $filtros): array {
+        $data = mort_despacho_analisis_bloque_principal($conn, $filtros);
+
+        return [
+            'filas' => count($data['resumenGranjas'] ?? []),
+            'total' => (int) (($data['causas']['total'] ?? 0)),
+        ];
+    });
+
+    $pasos[] = mort_despacho_benchmark_paso_php('etapas', 'UI bloque etapas (san_fact + claves S700)', static function () use ($conn, $filtros): array {
+        $data = mort_despacho_consultar_etapas($conn, $filtros);
+
+        return ['total' => (int) ($data['total'] ?? 0)];
+    });
+
+    if ($sqlS700 !== '') {
+        $pasos[] = mort_despacho_benchmark_paso_sql(
+            $conn,
+            'sql_s700_claves',
+            'SQL: subconsulta S700 (COUNT de claves día/cenco/galpón)',
+            'SELECT COUNT(*) AS n FROM (' . $sqlS700 . ') k'
+        );
+    }
+
+    if ($sqlCausas !== '') {
+        $pasos[] = mort_despacho_benchmark_paso_sql(
+            $conn,
+            'sql_causas_listado',
+            'SQL: tabla 1 causas (cabe_zonas JD4)',
+            $sqlCausas
+        );
+    }
+
+    if ($sqlResumen !== '') {
+        $pasos[] = mort_despacho_benchmark_paso_sql(
+            $conn,
+            'sql_resumen_cenco',
+            'SQL: tabla 3 resumen (S700 + S808)',
+            $sqlResumen
+        );
+    }
+
+    if ($sqlEtapas !== '') {
+        $pasos[] = mort_despacho_benchmark_paso_sql(
+            $conn,
+            'sql_etapas',
+            'SQL: etapas (san_fact + join S700)',
+            $sqlEtapas
+        );
+    }
+
+    $pasos[] = mort_despacho_benchmark_paso_php(
+        'php_resumen_ui',
+        'PHP: nombres granja (ccos) + orden resumen',
+        static function () use ($conn, $filtros): array {
+            $filasCenco = mort_despacho_resumen_cenco_sql_filas($conn, $filtros);
+            $ui = mort_despacho_consultar_resumen_granjas_desde_filas_cenco($conn, $filasCenco);
+
+            return ['filas' => count($ui)];
+        }
+    );
+
+    if ($extendido) {
+        $pasos[] = mort_despacho_benchmark_paso_php(
+            'ventas_agrupada_galpon',
+            'Legacy: ventas_agrupada por galpón (health)',
+            static function () use ($conn, $filtros): array {
+                $filas = mort_despacho_ventas_agrupada_filas($conn, $filtros);
+
+                return ['filas' => count($filas)];
+            }
+        );
+
+        $pasos[] = mort_despacho_benchmark_paso_php(
+            's808_sin_s700',
+            'Diagnóstico: S808 sin par S700',
+            static function () use ($conn, $filtros): array {
+                return ['filas' => mort_despacho_contar_s808_sin_par_s700($conn, $filtros)];
+            }
+        );
+    }
+
+    $ordenado = $pasos;
+    usort($ordenado, static function (array $a, array $b): int {
+        $cmp = ($b['ms_total'] <=> $a['ms_total']);
+        if ($cmp !== 0) {
+            return $cmp;
+        }
+
+        return strcmp((string) $a['id'], (string) $b['id']);
+    });
+
+    $masPesado = $ordenado[0] ?? null;
+
+    $msPrincipal = 0.0;
+    $msEtapas = 0.0;
+    foreach ($pasos as $p) {
+        if (($p['id'] ?? '') === 'bloque_principal') {
+            $msPrincipal = (float) ($p['ms_total'] ?? 0);
+        }
+        if (($p['id'] ?? '') === 'etapas') {
+            $msEtapas = (float) ($p['ms_total'] ?? 0);
+        }
+    }
+
+    $sumSql = 0.0;
+    foreach ($pasos as $p) {
+        if (($p['tipo'] ?? '') === 'sql' && !empty($p['ok'])) {
+            $sumSql += (float) ($p['ms_total'] ?? 0);
+        }
+    }
+
+    return [
+        'libRev' => defined('MORT_DESPACHO_LIB_REV') ? MORT_DESPACHO_LIB_REV : null,
+        'rango' => $rango,
+        'filtros' => [
+            'periodoTipo' => $filtros['periodoTipo'] ?? '',
+            'granja' => $filtros['granja'] ?? '',
+            'campania' => $filtros['campania'] ?? '',
+            'cencos_list' => $filtros['cencos_list'] ?? [],
+        ],
+        'extendido' => $extendido,
+        'pasos' => $pasos,
+        'ordenado_por_ms' => $ordenado,
+        'mas_pesado' => $masPesado,
+        'resumen_tiempos' => [
+            'ms_ui_principal' => $msPrincipal,
+            'ms_ui_etapas' => $msEtapas,
+            'ms_ui_paralelo_aprox' => round(max($msPrincipal, $msEtapas), 2),
+            'ms_sql_desglosado_suma' => round($sumSql, 2),
+            'nota' => 'La UI lanza principal y etapas en paralelo: el tiempo percibido ≈ max(principal, etapas). '
+                . 'Los pasos sql_* repiten consultas para aislar el cuello de botella (más carga en BD).',
+        ],
     ];
 }
