@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /** Revisión desplegable (health / JSON libRev). Compatible PHP >= 7.2. */
 if (!defined('MORT_DESPACHO_LIB_REV')) {
-    define('MORT_DESPACHO_LIB_REV', '20260925r');
+    define('MORT_DESPACHO_LIB_REV', '20260925s');
 }
 
 if (!defined('MORT_DESPACHO_MAX_KEYS_VENTA')) {
@@ -330,7 +330,6 @@ function mort_despacho_sql_from_claves_s700(mysqli $conn, array $filtros, string
 function mort_despacho_sql_text_causas_listado(mysqli $conn, array $filtros): string
 {
     $causas = mort_despacho_codigos_causa_listado_sql_in();
-    $joinCabe = mort_despacho_sql_join_cabe_mov_zonas('cz', 'mz');
     $conds = [
         "TRIM(cz.mark) = 'JD4'",
         "TRIM(mz.tcodigo) IN ('P0001001','P0001002')",
@@ -338,14 +337,17 @@ function mort_despacho_sql_text_causas_listado(mysqli $conn, array $filtros): st
         "LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0') IN {$causas}",
     ];
     mort_despacho_append_rango_fecha_registro_cz($conn, $filtros, 'cz', $conds);
+    mort_despacho_append_rango_tfectra($conn, $filtros, 'mz', $conds);
     mort_despacho_append_filtros_cenco_granja($conn, $filtros, 'mz', $conds);
 
     return "
     SELECT
         LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0') AS cod_mort,
         COALESCE(SUM(mz.tcantid), 0) AS cantidad
-    FROM movi_zonas mz
-    {$joinCabe}
+    FROM cabe_zonas cz
+    INNER JOIN movi_zonas mz ON
+        cz.mark = mz.mark AND cz.treg = mz.treg
+        AND cz.tdoc = mz.tdoc AND cz.tserie = mz.tserie AND cz.tnumfac = mz.tnumfac
     WHERE " . implode("\n        AND ", $conds) . "
     GROUP BY LPAD(TRIM(COALESCE(mz.tcod_mortgrs, '')), 2, '0')";
 }
@@ -1760,6 +1762,8 @@ function mort_despacho_benchmark_analisis(mysqli $conn, array $filtros, bool $ex
         throw new RuntimeException('Periodo inválido o incompleto.');
     }
 
+    @mysqli_query($conn, 'RESET QUERY CACHE');
+
     $preview = mort_despacho_export_sql_preview($conn, $filtros);
     $sqlS700 = (string) ($preview['sql']['1_subquery_s700_solo'] ?? '');
     $sqlCausas = (string) ($preview['sql']['2_causas_listado_jd4'] ?? '');
@@ -1767,21 +1771,6 @@ function mort_despacho_benchmark_analisis(mysqli $conn, array $filtros, bool $ex
     $sqlEtapas = (string) ($preview['sql']['4_etapas_san_fact'] ?? '');
 
     $pasos = [];
-
-    $pasos[] = mort_despacho_benchmark_paso_php('bloque_principal', 'UI bloque principal (2 SQL + armado JSON)', static function () use ($conn, $filtros): array {
-        $data = mort_despacho_analisis_bloque_principal($conn, $filtros);
-
-        return [
-            'filas' => count($data['resumenGranjas'] ?? []),
-            'total' => (int) (($data['causas']['total'] ?? 0)),
-        ];
-    });
-
-    $pasos[] = mort_despacho_benchmark_paso_php('etapas', 'UI bloque etapas (san_fact + claves S700)', static function () use ($conn, $filtros): array {
-        $data = mort_despacho_consultar_etapas($conn, $filtros);
-
-        return ['total' => (int) ($data['total'] ?? 0)];
-    });
 
     if ($sqlS700 !== '') {
         $pasos[] = mort_despacho_benchmark_paso_sql(
@@ -1830,6 +1819,21 @@ function mort_despacho_benchmark_analisis(mysqli $conn, array $filtros, bool $ex
         }
     );
 
+    $pasos[] = mort_despacho_benchmark_paso_php('etapas', 'UI bloque etapas (san_fact + claves S700)', static function () use ($conn, $filtros): array {
+        $data = mort_despacho_consultar_etapas($conn, $filtros);
+
+        return ['total' => (int) ($data['total'] ?? 0)];
+    });
+
+    $pasos[] = mort_despacho_benchmark_paso_php('bloque_principal', 'UI bloque principal (2 SQL + JSON; tras sql_* puede ir en caché)', static function () use ($conn, $filtros): array {
+        $data = mort_despacho_analisis_bloque_principal($conn, $filtros);
+
+        return [
+            'filas' => count($data['resumenGranjas'] ?? []),
+            'total' => (int) (($data['causas']['total'] ?? 0)),
+        ];
+    });
+
     if ($extendido) {
         $pasos[] = mort_despacho_benchmark_paso_php(
             'ventas_agrupada_galpon',
@@ -1874,9 +1878,25 @@ function mort_despacho_benchmark_analisis(mysqli $conn, array $filtros, bool $ex
     }
 
     $sumSql = 0.0;
+    $msCausas = 0.0;
+    $msResumen = 0.0;
     foreach ($pasos as $p) {
         if (($p['tipo'] ?? '') === 'sql' && !empty($p['ok'])) {
             $sumSql += (float) ($p['ms_total'] ?? 0);
+        }
+        if (($p['id'] ?? '') === 'sql_causas_listado') {
+            $msCausas = (float) ($p['ms_total'] ?? 0);
+        }
+        if (($p['id'] ?? '') === 'sql_resumen_cenco') {
+            $msResumen = (float) ($p['ms_total'] ?? 0);
+        }
+    }
+
+    $masPesadoSql = null;
+    foreach ($ordenado as $p) {
+        if (($p['tipo'] ?? '') === 'sql' && !empty($p['ok'])) {
+            $masPesadoSql = $p;
+            break;
         }
     }
 
@@ -1893,13 +1913,18 @@ function mort_despacho_benchmark_analisis(mysqli $conn, array $filtros, bool $ex
         'pasos' => $pasos,
         'ordenado_por_ms' => $ordenado,
         'mas_pesado' => $masPesado,
+        'mas_pesado_sql' => $masPesadoSql,
         'resumen_tiempos' => [
             'ms_ui_principal' => $msPrincipal,
             'ms_ui_etapas' => $msEtapas,
             'ms_ui_paralelo_aprox' => round(max($msPrincipal, $msEtapas), 2),
+            'ms_sql_causas' => $msCausas,
+            'ms_sql_resumen' => $msResumen,
+            'ms_principal_sql_estimado' => round($msCausas + $msResumen, 2),
             'ms_sql_desglosado_suma' => round($sumSql, 2),
-            'nota' => 'La UI lanza principal y etapas en paralelo: el tiempo percibido ≈ max(principal, etapas). '
-                . 'Los pasos sql_* repiten consultas para aislar el cuello de botella (más carga en BD).',
+            'nota' => 'SQL primero (RESET QUERY CACHE). Use mas_pesado_sql para el cuello real; '
+                . 'bloque_principal al final puede ser mucho más rápido por caché MySQL 5.7. '
+                . 'UI paralela ≈ max(principal, etapas).',
         ],
     ];
 }
